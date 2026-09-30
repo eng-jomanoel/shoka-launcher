@@ -3,10 +3,69 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+
+    <!-- Stem -->
     <path
-        android:fillColor="#4ADE80"
-        android:pathData="M35,38 L50,54 L35,70 L40,75 L60,54 L40,33 Z" />
+        android:fillColor="#1B5E20"
+        android:pathData="M52,68 Q53,72 52,80 Q51,84 50,88 L54,88 Q55,84 54,80 Q55,72 54,68 Z" />
+
+    <!-- Left leaf -->
     <path
-        android:fillColor="#4ADE80"
-        android:pathData="M56,70 L73,70 L73,75 L56,75 Z" />
+        android:fillColor="#2E7D32"
+        android:pathData="M52,76 Q46,72 40,74 Q44,78 52,76 Z" />
+
+    <!-- Right leaf -->
+    <path
+        android:fillColor="#2E7D32"
+        android:pathData="M54,80 Q60,76 64,78 Q60,82 54,80 Z" />
+
+    <!-- Outer petals - darkest blue -->
+    <path
+        android:fillColor="#1565C0"
+        android:pathData="M53,34 Q40,36 34,46 Q32,50 34,56 Q36,52 40,48 Q44,44 48,42 Q50,40 53,38 Z" />
+    <path
+        android:fillColor="#1565C0"
+        android:pathData="M53,34 Q66,36 72,46 Q74,50 72,56 Q70,52 66,48 Q62,44 58,42 Q56,40 53,38 Z" />
+    <path
+        android:fillColor="#0D47A1"
+        android:pathData="M34,56 Q33,62 36,66 Q40,70 46,70 Q42,66 38,62 Q36,58 34,56 Z" />
+    <path
+        android:fillColor="#0D47A1"
+        android:pathData="M72,56 Q73,62 70,66 Q66,70 60,70 Q64,66 68,62 Q70,58 72,56 Z" />
+
+    <!-- Middle petals - medium blue -->
+    <path
+        android:fillColor="#1E88E5"
+        android:pathData="M53,38 Q44,40 39,48 Q37,52 39,58 Q41,54 44,50 Q48,46 53,44 Z" />
+    <path
+        android:fillColor="#1E88E5"
+        android:pathData="M53,38 Q62,40 67,48 Q69,52 67,58 Q65,54 62,50 Q58,46 53,44 Z" />
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M39,58 Q38,62 42,66 Q46,68 50,68 Q46,64 42,60 Q40,58 39,58 Z" />
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M67,58 Q68,62 64,66 Q60,68 56,68 Q60,64 64,60 Q66,58 67,58 Z" />
+
+    <!-- Inner petals - lighter blue -->
+    <path
+        android:fillColor="#42A5F5"
+        android:pathData="M53,42 Q47,44 43,50 Q41,54 44,60 Q46,56 48,52 Q50,48 53,46 Z" />
+    <path
+        android:fillColor="#42A5F5"
+        android:pathData="M53,42 Q59,44 63,50 Q65,54 62,60 Q60,56 58,52 Q56,48 53,46 Z" />
+
+    <!-- Center - brightest -->
+    <path
+        android:fillColor="#64B5F6"
+        android:pathData="M53,46 Q49,48 47,53 Q46,56 48,60 Q50,56 53,52 Z" />
+    <path
+        android:fillColor="#64B5F6"
+        android:pathData="M53,46 Q57,48 59,53 Q60,56 58,60 Q56,56 53,52 Z" />
+
+    <!-- Core highlight -->
+    <path
+        android:fillColor="#90CAF9"
+        android:pathData="M53,50 Q51,52 50,55 Q51,57 53,54 Q55,57 56,55 Q55,52 53,50 Z" />
+
 </vector>

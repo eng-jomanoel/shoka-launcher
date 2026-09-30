@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Life Tracker Engine</string>
+    <string name="app_name">Shoka</string>
     
     <!-- UI -->
     <string name="cli_hint">digite um comando (ou \'help\')...</string>
