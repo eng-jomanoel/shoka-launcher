@@ -64,6 +64,29 @@ sealed interface BlockUiModel {
         val items: List<MediaItem> = emptyList()
     ) : BlockUiModel
 
+    /**
+     * Bloco de Treino / Academia com suporte a séries, repetições,
+     * carga, cronômetro de descanso sincronizado e lista de exercícios.
+     */
+    data class Workout(
+        override val moduleId: String,
+        override val title: String,
+        val dayName: String,
+        val exerciseName: String,
+        val currentSet: Int,
+        val totalSets: Int,
+        val targetReps: String,
+        val weight: Float,
+        val repsLogged: Int,
+        val isTimerActive: Boolean = false,
+        val timerRemainingSeconds: Int = 0,
+        val timerTotalSeconds: Int = 60,
+        val progressText: String? = null,
+        val actions: List<BlockAction> = emptyList(),
+        val exercises: List<WorkoutExerciseItem> = emptyList(),
+        val showExerciseList: Boolean = false
+    ) : BlockUiModel
+
     data class BlockAction(
         val label: String,
         val commandToExecute: String
@@ -74,5 +97,14 @@ sealed interface BlockUiModel {
         val sublabel: String? = null,
         val commandToExecute: String,
         val isActive: Boolean = false
+    )
+
+    data class WorkoutExerciseItem(
+        val index: Int,
+        val name: String,
+        val info: String,
+        val isCompleted: Boolean,
+        val isCurrent: Boolean,
+        val commandToExecute: String
     )
 }

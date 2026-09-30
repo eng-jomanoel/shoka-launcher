@@ -20,6 +20,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,6 +39,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lifetracker.engine.core.model.BlockUiModel
 import com.lifetracker.engine.ui.theme.EngineTheme
@@ -131,6 +136,7 @@ fun FeedZone(
                     is BlockUiModel.Progress -> ProgressCard(block)
                     is BlockUiModel.Interactive -> InteractiveCard(block, onActionClick)
                     is BlockUiModel.Media -> MediaCard(block, onActionClick)
+                    is BlockUiModel.Workout -> WorkoutCard(block, onActionClick)
                 }
             }
         }
@@ -617,6 +623,235 @@ private fun CardContainer(content: @Composable () -> Unit) {
     ) {
         Column {
             content()
+        }
+    }
+}
+
+@Composable
+private fun WorkoutCard(
+    block: BlockUiModel.Workout,
+    onActionClick: (String) -> Unit
+) {
+    CardContainer {
+        // Header: Day Name + Progress Indicator
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = block.dayName,
+                style = EngineTypography.titleMedium,
+                color = EngineTheme.colors.accentAmber,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+            if (block.progressText != null) {
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "[${block.progressText}]",
+                    style = EngineTypography.labelSmall,
+                    color = EngineTheme.colors.accentGreen,
+                    maxLines = 1,
+                    softWrap = false
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Main Exercise Info
+        Text(
+            text = block.exerciseName,
+            style = EngineTypography.titleMedium,
+            color = EngineTheme.colors.textPrimary
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // Badges: Set info + Target reps
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .background(EngineTheme.colors.cardBorder, RoundedCornerShape(4.dp))
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    text = "SÉRIE ${block.currentSet}/${block.totalSets}",
+                    style = EngineTypography.labelSmall,
+                    color = EngineTheme.colors.accentCyan
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .background(EngineTheme.colors.cardBorder, RoundedCornerShape(4.dp))
+                    .padding(horizontal = 8.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    text = "META: ${block.targetReps} REPS",
+                    style = EngineTypography.labelSmall,
+                    color = EngineTheme.colors.textSecondary
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Load / Weight & Reps Counter
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(EngineTheme.colors.background, RoundedCornerShape(6.dp))
+                .border(1.dp, EngineTheme.colors.cardBorder, RoundedCornerShape(6.dp))
+                .padding(vertical = 8.dp, horizontal = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            val weightStr = if (block.weight % 1f == 0f) "${block.weight.toInt()} KG" else "${block.weight} KG"
+            Text(
+                text = "CARGA: $weightStr",
+                style = EngineTypography.titleMedium,
+                color = EngineTheme.colors.textPrimary
+            )
+            Text(
+                text = "FEITAS: ${block.repsLogged} REPS",
+                style = EngineTypography.titleMedium,
+                color = EngineTheme.colors.accentGreen
+            )
+        }
+
+        // Rest Timer Section (when active)
+        if (block.isTimerActive) {
+            Spacer(modifier = Modifier.height(10.dp))
+            val m = block.timerRemainingSeconds / 60
+            val s = block.timerRemainingSeconds % 60
+            val timerText = String.format("%02d:%02d", m, s)
+            val fraction = if (block.timerTotalSeconds > 0) {
+                (block.timerRemainingSeconds.toFloat() / block.timerTotalSeconds.toFloat()).coerceIn(0f, 1f)
+            } else 0f
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "⏱️ DESCANSO",
+                    style = EngineTypography.labelSmall,
+                    color = EngineTheme.colors.accentAmber
+                )
+                Text(
+                    text = timerText,
+                    style = EngineTypography.titleMedium,
+                    color = EngineTheme.colors.accentAmber
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            LinearProgressIndicator(
+                progress = { fraction },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp)),
+                color = EngineTheme.colors.accentAmber,
+                trackColor = EngineTheme.colors.cardBorder,
+                strokeCap = StrokeCap.Round
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Quick Action Buttons
+        if (block.actions.isNotEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                block.actions.forEach { action ->
+                    val isCheckAction = action.label.contains("Check", ignoreCase = true) || action.label.contains("✓")
+                    val isSkipAction = action.label.contains("Pular", ignoreCase = true)
+                    val btnBg = if (isCheckAction) EngineTheme.colors.accentGreen.copy(alpha = 0.2f)
+                                else if (isSkipAction) EngineTheme.colors.accentAmber.copy(alpha = 0.2f)
+                                else EngineTheme.colors.cardBorder
+                    val btnTextColor = if (isCheckAction) EngineTheme.colors.accentGreen
+                                       else if (isSkipAction) EngineTheme.colors.accentAmber
+                                       else EngineTheme.colors.textPrimary
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(btnBg)
+                            .clickable { onActionClick(action.commandToExecute) }
+                            .padding(horizontal = 8.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = action.label,
+                            style = EngineTypography.labelSmall,
+                            color = btnTextColor,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
+            }
+        }
+
+        // Expandable Exercises List
+        if (block.showExerciseList && block.exercises.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(
+                modifier = Modifier.fillMaxWidth(),
+                color = EngineTheme.colors.cardBorder
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 240.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                block.exercises.forEach { ex ->
+                    val itemBg = if (ex.isCurrent) EngineTheme.colors.cardBorder.copy(alpha = 0.5f) else Color.Transparent
+                    val itemColor = if (ex.isCompleted) EngineTheme.colors.accentGreen
+                                    else if (ex.isCurrent) EngineTheme.colors.accentAmber
+                                    else EngineTheme.colors.textSecondary
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(itemBg)
+                            .clickable { onActionClick(ex.commandToExecute) }
+                            .padding(vertical = 6.dp, horizontal = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val icon = if (ex.isCompleted) "✓ " else if (ex.isCurrent) "▶ " else "  "
+                        Text(
+                            text = "$icon${ex.index}. ${ex.name}",
+                            style = EngineTypography.bodyMedium,
+                            color = itemColor,
+                            maxLines = 1,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (ex.info.isNotBlank()) {
+                            Text(
+                                text = ex.info,
+                                style = EngineTypography.labelSmall,
+                                color = EngineTheme.colors.textMuted
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

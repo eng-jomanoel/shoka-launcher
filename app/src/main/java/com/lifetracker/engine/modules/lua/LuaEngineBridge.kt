@@ -13,6 +13,10 @@ import org.luaj.vm2.LuaValue
 import org.luaj.vm2.lib.OneArgFunction
 import org.luaj.vm2.lib.TwoArgFunction
 import org.luaj.vm2.lib.ZeroArgFunction
+import android.os.VibrationEffect
+import android.os.Vibrator
+import org.json.JSONArray
+import org.json.JSONObject
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -187,6 +191,23 @@ class LuaEngineBridge(
                 return LuaValue.TRUE
             }
         })
+        system.set("vibrate", object : OneArgFunction() {
+            override fun call(arg: LuaValue): LuaValue {
+                val ms = if (arg.isnumber()) arg.tolong() else 300L
+                try {
+                    val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                        vibrator?.vibrate(VibrationEffect.createOneShot(ms, VibrationEffect.DEFAULT_AMPLITUDE))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        vibrator?.vibrate(ms)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+                return LuaValue.TRUE
+            }
+        })
         system.set("open_app", object : OneArgFunction() {
             override fun call(appQuery: LuaValue): LuaValue {
                 val query = appQuery.checkjstring()
@@ -195,6 +216,36 @@ class LuaEngineBridge(
             }
         })
         engine.set("system", system)
+
+        // --- Engine.json ---
+        val json = LuaTable()
+        json.set("parse", object : OneArgFunction() {
+            override fun call(arg: LuaValue): LuaValue {
+                val jsonStr = arg.checkjstring()
+                return try {
+                    val trimmed = jsonStr.trim()
+                    if (trimmed.startsWith("[")) {
+                        jsonToLua(JSONArray(trimmed))
+                    } else {
+                        jsonToLua(JSONObject(trimmed))
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    LuaValue.NIL
+                }
+            }
+        })
+        json.set("encode", object : OneArgFunction() {
+            override fun call(arg: LuaValue): LuaValue {
+                return try {
+                    val converted = luaToJson(arg)
+                    LuaValue.valueOf(converted.toString())
+                } catch (e: Exception) {
+                    LuaValue.valueOf("{}")
+                }
+            }
+        })
+        engine.set("json", json)
 
         // --- Engine.time ---
         val time = LuaTable()
@@ -213,6 +264,68 @@ class LuaEngineBridge(
         engine.set("time", time)
 
         globals.set("Engine", engine)
+    }
+
+    private fun jsonToLua(any: Any?): LuaValue {
+        return when (any) {
+            null, JSONObject.NULL -> LuaValue.NIL
+            is Boolean -> LuaValue.valueOf(any)
+            is Int -> LuaValue.valueOf(any)
+            is Long -> LuaValue.valueOf(any.toDouble())
+            is Double -> LuaValue.valueOf(any)
+            is String -> LuaValue.valueOf(any)
+            is JSONObject -> {
+                val table = LuaTable()
+                val keys = any.keys()
+                while (keys.hasNext()) {
+                    val key = keys.next()
+                    table.set(key, jsonToLua(any.get(key)))
+                }
+                table
+            }
+            is JSONArray -> {
+                val table = LuaTable()
+                for (i in 0 until any.length()) {
+                    table.set(i + 1, jsonToLua(any.get(i)))
+                }
+                table
+            }
+            else -> LuaValue.valueOf(any.toString())
+        }
+    }
+
+    private fun luaToJson(value: LuaValue): Any? {
+        return when {
+            value.isnil() -> JSONObject.NULL
+            value.isboolean() -> value.toboolean()
+            value.isint() -> value.toint()
+            value.islong() -> value.tolong()
+            value.isnumber() -> value.todouble()
+            value.isstring() -> value.tojstring()
+            value.istable() -> {
+                val table = value.checktable()
+                val len = table.length()
+                if (len > 0) {
+                    val arr = JSONArray()
+                    for (i in 1..len) {
+                        arr.put(luaToJson(table.get(i)))
+                    }
+                    arr
+                } else {
+                    val obj = JSONObject()
+                    var k = LuaValue.NIL
+                    while (true) {
+                        val next = table.next(k)
+                        k = next.arg1()
+                        if (k.isnil()) break
+                        val v = next.arg(2)
+                        obj.put(k.tojstring(), luaToJson(v))
+                    }
+                    obj
+                }
+            }
+            else -> value.tojstring()
+        }
     }
 
     private fun scanMusicDirectory(musicDir: File): LuaTable {

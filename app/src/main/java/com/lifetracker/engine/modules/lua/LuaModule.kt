@@ -103,7 +103,9 @@ class LuaModule(
     }
 
     private fun checkTicker(block: BlockUiModel?) {
-        if (block is BlockUiModel.Media && block.isPlaying) {
+        val needsTicker = (block is BlockUiModel.Media && block.isPlaying) ||
+                          (block is BlockUiModel.Workout && block.isTimerActive)
+        if (needsTicker) {
             if (tickerJob == null || tickerJob?.isActive != true) {
                 tickerJob = CoroutineScope(Dispatchers.Main).launch {
                     while (isActive) {
@@ -126,6 +128,65 @@ class LuaModule(
     private fun parseBlock(table: LuaTable): BlockUiModel? {
         val blockTitle = table.get("title").optjstring(name)
         val type = table.get("type").optjstring("")
+
+        // Verifica se é tipo Workout (Academia com timer de descanso e controle de séries)
+        if (type == "workout") {
+            val actions = mutableListOf<BlockUiModel.BlockAction>()
+            val actionsVal = table.get("actions")
+            if (!actionsVal.isnil() && actionsVal.istable()) {
+                val actionTable = actionsVal.checktable()
+                for (i in 1..actionTable.length()) {
+                    val act = actionTable.get(i)
+                    if (act.istable()) {
+                        actions.add(BlockUiModel.BlockAction(
+                            label = act.get("label").optjstring("[Botão]"),
+                            commandToExecute = act.get("cmd").optjstring("")
+                        ))
+                    }
+                }
+            }
+
+            val exercises = mutableListOf<BlockUiModel.WorkoutExerciseItem>()
+            val exercisesVal = table.get("exercises")
+            if (!exercisesVal.isnil() && exercisesVal.istable()) {
+                val exTable = exercisesVal.checktable()
+                for (i in 1..exTable.length()) {
+                    val ex = exTable.get(i)
+                    if (ex.istable()) {
+                        exercises.add(BlockUiModel.WorkoutExerciseItem(
+                            index = ex.get("index").optint(i),
+                            name = ex.get("name").optjstring("Exercício"),
+                            info = ex.get("info").optjstring(""),
+                            isCompleted = ex.get("completed").optboolean(false),
+                            isCurrent = ex.get("current").optboolean(false),
+                            commandToExecute = ex.get("cmd").optjstring("")
+                        ))
+                    }
+                }
+            }
+
+            val weightVal = table.get("weight")
+            val weightFloat = if (!weightVal.isnil()) weightVal.tofloat() else 0f
+
+            return BlockUiModel.Workout(
+                moduleId = id,
+                title = blockTitle,
+                dayName = table.get("day_name").optjstring("Treino"),
+                exerciseName = table.get("exercise_name").optjstring("Exercício Atual"),
+                currentSet = table.get("current_set").optint(1),
+                totalSets = table.get("total_sets").optint(1),
+                targetReps = table.get("target_reps").optjstring("8-12"),
+                weight = weightFloat,
+                repsLogged = table.get("reps_logged").optint(10),
+                isTimerActive = table.get("is_timer_active").optboolean(false),
+                timerRemainingSeconds = table.get("timer_remaining").optint(0),
+                timerTotalSeconds = table.get("timer_total").optint(60),
+                progressText = table.get("progress_text").optjstring(null),
+                actions = actions,
+                exercises = exercises,
+                showExerciseList = table.get("show_list").optboolean(false)
+            )
+        }
 
         // Verifica se é tipo Media (Player de música rico)
         if (type == "media" || !table.get("cover").isnil() || !table.get("items").isnil()) {
