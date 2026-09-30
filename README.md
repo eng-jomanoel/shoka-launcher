@@ -69,7 +69,7 @@ The screen is split into three main reactive zones driven by Jetpack Compose and
 ## ✨ Key Features
 
 - **⌨️ CLI-First Navigation**: Access everything via instant hotkeys and concise terminal commands.
-- **📜 Live Lua Plugin Engine**: Extend your home screen on the fly by placing `.lua` scripts in `/sdcard/Documents/ModularLife/modules/` — no recompilation needed.
+- **📜 Live Lua Plugin Engine**: Extend your home screen on the fly by placing `.lua` scripts in `/sdcard/Documents/Shoka/modules/` — no recompilation needed.
 - **⚡ Ultra-Low Footprint**: Optimized event-driven architecture (5s clock tick, zero polling receivers, minimal RAM footprint).
 - **🌑 100% True AMOLED Black (`#000000`)**: Zero power wasted on screen illumination for OLED/AMOLED displays.
 - **📱 Built-In Fuzzy App Launcher**: Quickly filter and launch installed Android apps straight from the command line (`o <app_name>`).

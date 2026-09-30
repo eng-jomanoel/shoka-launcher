@@ -18,7 +18,7 @@ import java.io.File
 
 /**
  * Módulo nativo do Launcher responsável por gerenciar a aparência visual.
- * Carrega temas definidos dinamicamente em scripts Lua na pasta Documents/ModularLife/themes/.
+ * Carrega temas definidos dinamicamente em scripts Lua na pasta Documents/Shoka/themes/.
  * Prefixo: "t" (theme)
  * Exemplo: "t list", "t dracula", "t amoled", "t solarized_dark"
  */
@@ -38,8 +38,13 @@ class ThemeModule(private val context: Context) : EngineModule {
 
     val themesDir: File by lazy {
         val docs = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-        val dir = File(docs, "ModularLife/themes")
-        dir.mkdirs()
+        val dir = File(docs, "Shoka/themes").apply { mkdirs() }
+        val oldDir = File(docs, "ModularLife/themes")
+        if (oldDir.exists() && oldDir.isDirectory) {
+            try {
+                oldDir.copyRecursively(dir, overwrite = false)
+            } catch (_: Exception) {}
+        }
         dir
     }
 
@@ -245,7 +250,7 @@ return {
         if (query == "list") {
             ensureDefaultThemes()
             val files = themesDir.listFiles { f -> f.extension == "lua" } ?: emptyArray()
-            val sb = StringBuilder("TEMAS DISPONÍVEIS (Documents/ModularLife/themes):\n")
+            val sb = StringBuilder("TEMAS DISPONÍVEIS (Documents/Shoka/themes):\n")
             val current = _currentThemeName.value
             files.forEach { f ->
                 val name = f.nameWithoutExtension
@@ -280,7 +285,7 @@ return {
         return if (applyTheme(query, save = true)) {
             CommandResult.Success("Tema '$query' aplicado e salvo com sucesso!")
         } else {
-            CommandResult.Error("Tema '$query' não encontrado em Documents/ModularLife/themes. Digite 't list'.")
+            CommandResult.Error("Tema '$query' não encontrado em Documents/Shoka/themes. Digite 't list'.")
         }
     }
 }

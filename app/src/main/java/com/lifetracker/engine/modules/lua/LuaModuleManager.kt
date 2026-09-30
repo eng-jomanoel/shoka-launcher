@@ -13,7 +13,15 @@ class LuaModuleManager(
 ) {
     val rootDir: File by lazy {
         val docs = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-        File(docs, "ModularLife").apply { mkdirs() }
+        val shokaDir = File(docs, "Shoka").apply { mkdirs() }
+        // Auto-migration: if old ModularLife folder exists, copy files to Shoka
+        val oldDir = File(docs, "ModularLife")
+        if (oldDir.exists() && oldDir.isDirectory) {
+            try {
+                oldDir.copyRecursively(shokaDir, overwrite = false)
+            } catch (_: Exception) {}
+        }
+        shokaDir
     }
 
     val modulesDir: File by lazy {
