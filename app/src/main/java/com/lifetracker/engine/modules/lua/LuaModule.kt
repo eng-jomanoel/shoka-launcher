@@ -3,6 +3,7 @@ package com.lifetracker.engine.modules.lua
 import androidx.compose.ui.graphics.Color
 import com.lifetracker.engine.core.model.BlockUiModel
 import com.lifetracker.engine.core.module.CommandResult
+import com.lifetracker.engine.core.module.CommandSuggestion
 import com.lifetracker.engine.core.module.EngineModule
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,6 +39,56 @@ class LuaModule(
     override val blockFlow: StateFlow<BlockUiModel?> = _blockFlow.asStateFlow()
     override val hasUi: Boolean
         get() = true
+
+    override fun getSuggestions(args: String): List<CommandSuggestion> {
+        try {
+            val autoFunc = moduleTable?.get("autocomplete")
+            if (autoFunc != null && autoFunc.isfunction()) {
+                val res = autoFunc.call(LuaValue.valueOf(args))
+                if (res.istable()) {
+                    val table = res.checktable()
+                    val list = mutableListOf<CommandSuggestion>()
+                    for (i in 1..table.length()) {
+                        val item = table.get(i)
+                        if (item.isstring()) {
+                            val subcmd = item.tojstring()
+                            val fullCmd = if (subcmd.startsWith("$commandPrefix ")) subcmd else "$commandPrefix $subcmd"
+                            list.add(CommandSuggestion(
+                                command = fullCmd,
+                                displayText = fullCmd,
+                                isExecutable = !fullCmd.endsWith(" ")
+                            ))
+                        } else if (item.istable()) {
+                            val itab = item.checktable()
+                            val rawCmd = itab.get("command").optjstring(itab.get(1).optjstring(""))
+                            val fullCmd = if (rawCmd.startsWith("$commandPrefix ")) rawCmd else "$commandPrefix $rawCmd"
+                            val label = itab.get("label").optjstring(fullCmd)
+                            val isExec = itab.get("executable").optboolean(!fullCmd.endsWith(" "))
+                            list.add(CommandSuggestion(fullCmd, label, isExec))
+                        }
+                    }
+                    if (list.isNotEmpty()) return list
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        val q = args.trim().lowercase()
+        val block = _blockFlow.value
+        val fallbackList = mutableListOf<CommandSuggestion>()
+        if (block is BlockUiModel.Workout) {
+            val cmds = listOf("check", "pular", "files", "load ", "day ", "list", "reset", "uncheck")
+            cmds.forEach { c ->
+                fallbackList.add(CommandSuggestion(
+                    command = "$commandPrefix $c",
+                    displayText = "$commandPrefix $c",
+                    isExecutable = !c.endsWith(" ")
+                ))
+            }
+        }
+        return if (q.isEmpty()) fallbackList else fallbackList.filter { it.command.contains(q) }
+    }
 
     init {
         reload()
@@ -185,6 +236,24 @@ class LuaModule(
                 }
             }
 
+            val files = mutableListOf<BlockUiModel.WorkoutFileItem>()
+            val filesVal = table.get("files")
+            if (!filesVal.isnil() && filesVal.istable()) {
+                val fileTable = filesVal.checktable()
+                for (i in 1..fileTable.length()) {
+                    val f = fileTable.get(i)
+                    if (f.istable()) {
+                        files.add(BlockUiModel.WorkoutFileItem(
+                            name = f.get("name").optjstring(""),
+                            isActive = f.get("is_active").optboolean(false),
+                            commandToExecute = f.get("cmd").optjstring("")
+                        ))
+                    }
+                }
+            }
+
+            val showFileList = table.get("show_files").optboolean(false)
+
             val decWeightCmd = table.get("dec_weight_cmd").optjstring("g w-")
             val incWeightCmd = table.get("inc_weight_cmd").optjstring("g w+")
             val decRepsCmd = table.get("dec_reps_cmd").optjstring("g r-")
@@ -211,6 +280,8 @@ class LuaModule(
                 exercises = exercises,
                 showExerciseList = table.get("show_list").optboolean(false),
                 days = days,
+                files = files,
+                showFileList = showFileList,
                 decWeightCmd = decWeightCmd,
                 incWeightCmd = incWeightCmd,
                 decRepsCmd = decRepsCmd,

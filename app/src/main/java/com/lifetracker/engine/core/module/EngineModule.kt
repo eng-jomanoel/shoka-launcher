@@ -46,5 +46,22 @@ interface EngineModule {
      * Exemplo: se o usuário digitar "a 500", [args] conterá "500".
      */
     suspend fun executeCommand(args: String): CommandResult
+
+    /**
+     * Fornece sugestões de autocompletação baseadas nos argumentos digitados.
+     */
+    fun getSuggestions(args: String): List<CommandSuggestion> = emptyList()
 }
+
+/**
+ * Representa uma sugestão de comando exibida acima do prompt CLI.
+ * [command]: O comando completo a ser executado ou preenchido.
+ * [displayText]: O texto amigável exibido no chip.
+ * [isExecutable]: Se true, o clique no chip executa imediatamente; se false, preenche o prompt.
+ */
+data class CommandSuggestion(
+    val command: String,
+    val displayText: String = command,
+    val isExecutable: Boolean = true
+)
 

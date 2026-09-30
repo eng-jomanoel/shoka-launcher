@@ -86,6 +86,8 @@ sealed interface BlockUiModel {
         val exercises: List<WorkoutExerciseItem> = emptyList(),
         val showExerciseList: Boolean = false,
         val days: List<WorkoutDayItem> = emptyList(),
+        val files: List<WorkoutFileItem> = emptyList(),
+        val showFileList: Boolean = false,
         val decWeightCmd: String = "g w-",
         val incWeightCmd: String = "g w+",
         val decRepsCmd: String = "g r-",
@@ -118,6 +120,12 @@ sealed interface BlockUiModel {
         val label: String,
         val isCurrent: Boolean,
         val isToday: Boolean = false,
+        val commandToExecute: String
+    )
+
+    data class WorkoutFileItem(
+        val name: String,
+        val isActive: Boolean,
         val commandToExecute: String
     )
 }

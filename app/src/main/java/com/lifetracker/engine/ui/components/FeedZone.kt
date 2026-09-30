@@ -25,22 +25,37 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lifetracker.engine.core.model.BlockUiModel
@@ -674,6 +689,48 @@ private fun WorkoutCard(
     block: BlockUiModel.Workout,
     onActionClick: (String) -> Unit
 ) {
+    val focusManager = LocalFocusManager.current
+    val weightFocusRequester = remember { FocusRequester() }
+    val repsFocusRequester = remember { FocusRequester() }
+
+    var isWeightFocused by remember { mutableStateOf(false) }
+    var isRepsFocused by remember { mutableStateOf(false) }
+
+    val formatWeight: (Float) -> String = { w ->
+        if (w % 1f == 0f) w.toInt().toString() else w.toString()
+    }
+
+    var weightValue by remember(block.exerciseName, block.weight) {
+        val initial = formatWeight(block.weight)
+        mutableStateOf(TextFieldValue(text = initial, selection = TextRange(initial.length)))
+    }
+
+    var repsValue by remember(block.exerciseName, block.repsLogged) {
+        val initial = block.repsLogged.toString()
+        mutableStateOf(TextFieldValue(text = initial, selection = TextRange(initial.length)))
+    }
+
+    val commitValues = {
+        val w = weightValue.text.replace(',', '.').toFloatOrNull() ?: block.weight
+        val r = repsValue.text.toIntOrNull() ?: block.repsLogged
+        if (w != block.weight || r != block.repsLogged) {
+            val wStr = formatWeight(w)
+            onActionClick("g $wStr $r")
+        }
+    }
+
+    val handleActionClick: (String) -> Unit = { cmd ->
+        if (cmd == "g check" || cmd.startsWith("g check")) {
+            val w = weightValue.text.replace(',', '.').toFloatOrNull() ?: block.weight
+            val r = repsValue.text.toIntOrNull() ?: block.repsLogged
+            val wStr = formatWeight(w)
+            onActionClick("g check $wStr $r")
+        } else {
+            commitValues()
+            onActionClick(cmd)
+        }
+    }
+
     CardContainer {
         // Header: Day Name + Progress Indicator
         Row(
@@ -721,7 +778,7 @@ private fun WorkoutCard(
                             .clip(RoundedCornerShape(4.dp))
                             .background(bg)
                             .border(1.dp, borderCol, RoundedCornerShape(4.dp))
-                            .clickable { onActionClick(day.commandToExecute) }
+                            .clickable { handleActionClick(day.commandToExecute) }
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
                         Text(
@@ -780,131 +837,184 @@ private fun WorkoutCard(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Load / Weight & Reps Stepper Controls
+        // Direct Editable Input Fields for Carga & Reps
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Weight Stepper (Left Box)
-            Row(
+            // Carga Input (Left Box)
+            Box(
                 modifier = Modifier
                     .weight(1f)
                     .background(EngineTheme.colors.background, RoundedCornerShape(6.dp))
-                    .border(1.dp, EngineTheme.colors.cardBorder, RoundedCornerShape(6.dp))
-                    .padding(vertical = 4.dp, horizontal = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .border(
+                        width = 1.dp,
+                        color = if (isWeightFocused) EngineTheme.colors.accentAmber else EngineTheme.colors.cardBorder,
+                        shape = RoundedCornerShape(6.dp)
+                    )
+                    .clickable { weightFocusRequester.requestFocus() }
+                    .padding(vertical = 8.dp, horizontal = 10.dp)
             ) {
-                // Minus Weight Button
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(EngineTheme.colors.card)
-                        .border(1.dp, EngineTheme.colors.cardBorder, RoundedCornerShape(4.dp))
-                        .clickable { onActionClick(block.decWeightCmd) },
-                    contentAlignment = Alignment.Center
-                ) {
+                Column {
                     Text(
-                        text = "−",
-                        style = EngineTypography.titleMedium,
-                        color = EngineTheme.colors.accentAmber
-                    )
-                }
-
-                // Weight Label
-                val weightStr = if (block.weight % 1f == 0f) "${block.weight.toInt()} KG" else "${block.weight} KG"
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "CARGA",
+                        text = "CARGA (KG)",
                         style = EngineTypography.labelSmall,
-                        color = EngineTheme.colors.textMuted
+                        color = if (isWeightFocused) EngineTheme.colors.accentAmber else EngineTheme.colors.textMuted
                     )
-                    Text(
-                        text = weightStr,
-                        style = EngineTypography.titleMedium,
-                        color = EngineTheme.colors.textPrimary
-                    )
-                }
-
-                // Plus Weight Button
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(EngineTheme.colors.card)
-                        .border(1.dp, EngineTheme.colors.cardBorder, RoundedCornerShape(4.dp))
-                        .clickable { onActionClick(block.incWeightCmd) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "+",
-                        style = EngineTypography.titleMedium,
-                        color = EngineTheme.colors.accentAmber
-                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        BasicTextField(
+                            value = weightValue,
+                            onValueChange = { newVal ->
+                                val clean = newVal.text.replace(',', '.').filter { it.isDigit() || it == '.' }
+                                if (clean.count { it == '.' } <= 1 && clean.length <= 6) {
+                                    weightValue = newVal.copy(text = clean)
+                                }
+                            },
+                            textStyle = EngineTypography.titleMedium.copy(
+                                color = if (isWeightFocused) EngineTheme.colors.accentAmber else EngineTheme.colors.textPrimary
+                            ),
+                            cursorBrush = SolidColor(EngineTheme.colors.accentAmber),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal,
+                                imeAction = ImeAction.Next
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onNext = { repsFocusRequester.requestFocus() }
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .focusRequester(weightFocusRequester)
+                                .onFocusChanged { focusState ->
+                                    isWeightFocused = focusState.isFocused
+                                    if (focusState.isFocused) {
+                                        weightValue = weightValue.copy(
+                                            selection = TextRange(0, weightValue.text.length)
+                                        )
+                                    } else {
+                                        commitValues()
+                                    }
+                                },
+                            decorationBox = { innerTextField ->
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "> ",
+                                        style = EngineTypography.titleMedium,
+                                        color = if (isWeightFocused) EngineTheme.colors.accentAmber else EngineTheme.colors.textMuted
+                                    )
+                                    if (weightValue.text.isEmpty()) {
+                                        Text(
+                                            text = "0",
+                                            style = EngineTypography.titleMedium,
+                                            color = EngineTheme.colors.textMuted
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            }
+                        )
+                        Text(
+                            text = "KG",
+                            style = EngineTypography.labelSmall,
+                            color = EngineTheme.colors.textMuted
+                        )
+                    }
                 }
             }
 
-            // Reps Stepper (Right Box)
-            Row(
+            // Reps Input (Right Box)
+            Box(
                 modifier = Modifier
                     .weight(1f)
                     .background(EngineTheme.colors.background, RoundedCornerShape(6.dp))
-                    .border(1.dp, EngineTheme.colors.cardBorder, RoundedCornerShape(6.dp))
-                    .padding(vertical = 4.dp, horizontal = 6.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .border(
+                        width = 1.dp,
+                        color = if (isRepsFocused) EngineTheme.colors.accentGreen else EngineTheme.colors.cardBorder,
+                        shape = RoundedCornerShape(6.dp)
+                    )
+                    .clickable { repsFocusRequester.requestFocus() }
+                    .padding(vertical = 8.dp, horizontal = 10.dp)
             ) {
-                // Minus Reps Button
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(EngineTheme.colors.card)
-                        .border(1.dp, EngineTheme.colors.cardBorder, RoundedCornerShape(4.dp))
-                        .clickable { onActionClick(block.decRepsCmd) },
-                    contentAlignment = Alignment.Center
-                ) {
+                Column {
                     Text(
-                        text = "−",
-                        style = EngineTypography.titleMedium,
-                        color = EngineTheme.colors.accentGreen
-                    )
-                }
-
-                // Reps Label
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "REPS FEITAS",
+                        text = "REPETIÇÕES",
                         style = EngineTypography.labelSmall,
-                        color = EngineTheme.colors.textMuted
+                        color = if (isRepsFocused) EngineTheme.colors.accentGreen else EngineTheme.colors.textMuted
                     )
-                    Text(
-                        text = "${block.repsLogged}",
-                        style = EngineTypography.titleMedium,
-                        color = EngineTheme.colors.accentGreen
-                    )
-                }
-
-                // Plus Reps Button
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(EngineTheme.colors.card)
-                        .border(1.dp, EngineTheme.colors.cardBorder, RoundedCornerShape(4.dp))
-                        .clickable { onActionClick(block.incRepsCmd) },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "+",
-                        style = EngineTypography.titleMedium,
-                        color = EngineTheme.colors.accentGreen
-                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        BasicTextField(
+                            value = repsValue,
+                            onValueChange = { newVal ->
+                                val clean = newVal.text.filter { it.isDigit() }
+                                if (clean.length <= 4) {
+                                    repsValue = newVal.copy(text = clean)
+                                }
+                            },
+                            textStyle = EngineTypography.titleMedium.copy(
+                                color = if (isRepsFocused) EngineTheme.colors.accentGreen else EngineTheme.colors.textPrimary
+                            ),
+                            cursorBrush = SolidColor(EngineTheme.colors.accentGreen),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Number,
+                                imeAction = ImeAction.Done
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    focusManager.clearFocus()
+                                    commitValues()
+                                }
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .focusRequester(repsFocusRequester)
+                                .onFocusChanged { focusState ->
+                                    isRepsFocused = focusState.isFocused
+                                    if (focusState.isFocused) {
+                                        repsValue = repsValue.copy(
+                                            selection = TextRange(0, repsValue.text.length)
+                                        )
+                                    } else {
+                                        commitValues()
+                                    }
+                                },
+                            decorationBox = { innerTextField ->
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = "> ",
+                                        style = EngineTypography.titleMedium,
+                                        color = if (isRepsFocused) EngineTheme.colors.accentGreen else EngineTheme.colors.textMuted
+                                    )
+                                    if (repsValue.text.isEmpty()) {
+                                        Text(
+                                            text = "0",
+                                            style = EngineTypography.titleMedium,
+                                            color = EngineTheme.colors.textMuted
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            }
+                        )
+                        Text(
+                            text = "REPS",
+                            style = EngineTypography.labelSmall,
+                            color = EngineTheme.colors.textMuted
+                        )
+                    }
                 }
             }
         }
-
 
         // Rest Timer Section (when active)
         if (block.isTimerActive) {
@@ -967,7 +1077,7 @@ private fun WorkoutCard(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
                             .background(btnBg)
-                            .clickable { onActionClick(action.commandToExecute) }
+                            .clickable { handleActionClick(action.commandToExecute) }
                             .padding(horizontal = 8.dp, vertical = 6.dp)
                     ) {
                         Text(
@@ -1009,7 +1119,7 @@ private fun WorkoutCard(
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(4.dp))
                             .background(itemBg)
-                            .clickable { onActionClick(ex.commandToExecute) }
+                            .clickable { handleActionClick(ex.commandToExecute) }
                             .padding(vertical = 6.dp, horizontal = 6.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
@@ -1027,6 +1137,63 @@ private fun WorkoutCard(
                                 text = ex.info,
                                 style = EngineTypography.labelSmall,
                                 color = EngineTheme.colors.textMuted
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Expandable Workout Files List (Fichas Disponíveis)
+        if (block.showFileList && block.files.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(
+                modifier = Modifier.fillMaxWidth(),
+                color = EngineTheme.colors.cardBorder
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "FICHAS DISPONÍVEIS (DOCUMENTS/SHOKA/DATA/):",
+                style = EngineTypography.labelSmall,
+                color = EngineTheme.colors.accentAmber
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 200.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                block.files.forEach { file ->
+                    val itemBg = if (file.isActive) EngineTheme.colors.accentAmber.copy(alpha = 0.15f) else Color.Transparent
+                    val itemColor = if (file.isActive) EngineTheme.colors.accentAmber else EngineTheme.colors.textPrimary
+                    val borderCol = if (file.isActive) EngineTheme.colors.accentAmber else EngineTheme.colors.cardBorder.copy(alpha = 0.5f)
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(itemBg)
+                            .border(1.dp, borderCol, RoundedCornerShape(4.dp))
+                            .clickable { handleActionClick(file.commandToExecute) }
+                            .padding(vertical = 8.dp, horizontal = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = (if (file.isActive) "▶ " else "  ") + file.name,
+                            style = EngineTypography.bodyMedium,
+                            color = itemColor,
+                            maxLines = 1,
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (file.isActive) {
+                            Text(
+                                text = "[ATIVA]",
+                                style = EngineTypography.labelSmall,
+                                color = EngineTheme.colors.accentAmber
                             )
                         }
                     }

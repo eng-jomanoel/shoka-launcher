@@ -122,11 +122,23 @@ fun HomeScreen(
             )
         }
 
+        val suggestions = remember(currentInput, activeBlocks) {
+            moduleRegistry.getSuggestions(currentInput)
+        }
+
         CliZone(
             lastResult = lastCommandResult,
             currentInput = currentInput,
             onInputChange = { currentInput = it },
-            onExecuteCommand = executeCommand
+            onExecuteCommand = executeCommand,
+            suggestions = suggestions,
+            onSuggestionClick = { sugg ->
+                if (sugg.isExecutable) {
+                    executeCommand(sugg.command)
+                } else {
+                    currentInput = sugg.command
+                }
+            }
         )
     }
 }

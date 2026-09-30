@@ -204,4 +204,61 @@ class ModuleRegistry(
             CommandResult.Error("Comando '$prefix' desconhecido. Digite 'help'.")
         }
     }
+
+    /**
+     * Retorna sugestões dinâmicas de autocomplete com base no que está digitado no terminal.
+     */
+    fun getSuggestions(input: String): List<CommandSuggestion> {
+        val trimmed = input.trimStart()
+        if (trimmed.isEmpty()) {
+            val defaults = mutableListOf<CommandSuggestion>()
+            _modules.value.forEach { mod ->
+                when (mod.commandPrefix) {
+                    "g" -> {
+                        defaults.add(CommandSuggestion("g check", "g check", true))
+                        defaults.add(CommandSuggestion("g pular", "g pular", true))
+                        defaults.add(CommandSuggestion("g files", "g files", true))
+                    }
+                    "mod" -> defaults.add(CommandSuggestion("mod edit", "mod edit", true))
+                    "sys" -> defaults.add(CommandSuggestion("sys reload", "sys reload", true))
+                    "t" -> defaults.add(CommandSuggestion("t toggle", "t toggle", true))
+                    "o" -> defaults.add(CommandSuggestion("o ", "o <app>", false))
+                }
+            }
+            defaults.add(CommandSuggestion("help", "help", true))
+            return defaults.distinctBy { it.command }
+        }
+
+        val parts = trimmed.split("\\s+".toRegex(), limit = 2)
+        val prefix = parts[0].lowercase()
+        val hasSpace = trimmed.contains(" ")
+        val args = if (parts.size > 1) parts[1] else ""
+
+        if (!hasSpace) {
+            val matchingModules = _modules.value.filter { 
+                it.commandPrefix.startsWith(prefix, ignoreCase = true) 
+            }
+
+            val results = mutableListOf<CommandSuggestion>()
+            
+            if ("help".startsWith(prefix)) {
+                results.add(CommandSuggestion("help", "help", true))
+            }
+
+            for (mod in matchingModules) {
+                val modSugg = mod.getSuggestions("")
+                if (modSugg.isNotEmpty()) {
+                    results.addAll(modSugg)
+                } else {
+                    results.add(CommandSuggestion("${mod.commandPrefix} ", "${mod.commandPrefix} <cmd>", false))
+                }
+            }
+            return results.distinctBy { it.command }
+        } else {
+            val targetModule = _modules.value.firstOrNull { 
+                it.commandPrefix.equals(prefix, ignoreCase = true) 
+            }
+            return targetModule?.getSuggestions(args) ?: emptyList()
+        }
+    }
 }

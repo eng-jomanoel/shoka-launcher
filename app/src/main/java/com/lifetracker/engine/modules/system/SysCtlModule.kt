@@ -5,6 +5,7 @@ import android.content.Context
 import android.media.AudioManager
 import com.lifetracker.engine.core.model.BlockUiModel
 import com.lifetracker.engine.core.module.CommandResult
+import com.lifetracker.engine.core.module.CommandSuggestion
 import com.lifetracker.engine.core.module.EngineModule
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -24,6 +25,18 @@ class SysCtlModule(
 
     private val _blockFlow = MutableStateFlow<BlockUiModel?>(null)
     override val blockFlow: StateFlow<BlockUiModel?> = _blockFlow.asStateFlow()
+
+    override fun getSuggestions(args: String): List<CommandSuggestion> {
+        val query = args.trim().lowercase()
+        val all = listOf(
+            CommandSuggestion("sys reload", "sys reload", true),
+            CommandSuggestion("sys unpin", "sys unpin", true),
+            CommandSuggestion("sys vol ", "sys vol <0-100>", false),
+            CommandSuggestion("sys bri ", "sys bri <0-100>", false),
+            CommandSuggestion("sys remove-admin", "sys remove-admin", true)
+        )
+        return if (query.isEmpty()) all else all.filter { it.command.contains(query) }
+    }
 
     override suspend fun executeCommand(args: String): CommandResult {
         val tokens = args.trim().lowercase().split(" ")

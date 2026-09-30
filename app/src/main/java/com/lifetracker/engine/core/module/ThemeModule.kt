@@ -32,6 +32,24 @@ class ThemeModule(private val context: Context) : EngineModule {
     private val _blockFlow = MutableStateFlow<BlockUiModel?>(null)
     override val blockFlow: StateFlow<BlockUiModel?> = _blockFlow.asStateFlow()
 
+    override fun getSuggestions(args: String): List<CommandSuggestion> {
+        val query = args.trim().lowercase()
+        val themeFiles = themesDir.listFiles { f -> f.extension == "lua" }?.map { it.nameWithoutExtension } ?: emptyList()
+        val builtIns = listOf("amoled", "solarized_dark", "solarized_light")
+        val allThemes = (builtIns + themeFiles).distinct()
+        
+        val base = listOf(
+            CommandSuggestion("t toggle", "t toggle", true),
+            CommandSuggestion("t list", "t list", true),
+            CommandSuggestion("t reload", "t reload", true)
+        )
+        val themeSuggestions = allThemes.map { name ->
+            CommandSuggestion("t $name", "t $name", true)
+        }
+        val combined = base + themeSuggestions
+        return if (query.isEmpty()) combined else combined.filter { it.command.contains(query) }
+    }
+
     private val prefs by lazy {
         context.getSharedPreferences("modular_theme_prefs", Context.MODE_PRIVATE)
     }

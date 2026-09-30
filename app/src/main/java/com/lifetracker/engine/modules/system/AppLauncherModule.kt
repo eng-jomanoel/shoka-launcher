@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.content.pm.ResolveInfo
 import com.lifetracker.engine.core.model.BlockUiModel
 import com.lifetracker.engine.core.module.CommandResult
+import com.lifetracker.engine.core.module.CommandSuggestion
 import com.lifetracker.engine.core.module.EngineModule
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,12 +34,30 @@ class AppLauncherModule(
     override val blockFlow: StateFlow<BlockUiModel?> = _blockFlow.asStateFlow()
 
     private var cachedApps = emptyList<AppItem>()
+    fun getInstalledAppNames(): List<String> = cachedApps.map { it.label }
 
     init {
         // Carrega a lista de apps assincronamente ao iniciar a Engine
         Thread {
             cachedApps = loadInstalledApps()
         }.start()
+    }
+
+    override fun getSuggestions(args: String): List<CommandSuggestion> {
+        val query = args.trim().lowercase()
+        val apps = if (cachedApps.isEmpty()) loadInstalledApps().also { cachedApps = it } else cachedApps
+        val matches = if (query.isEmpty()) {
+            apps.take(8)
+        } else {
+            apps.filter { it.label.lowercase().contains(query) }.take(8)
+        }
+        return matches.map { app ->
+            CommandSuggestion(
+                command = "o ${app.label}",
+                displayText = "o ${app.label}",
+                isExecutable = true
+            )
+        }
     }
 
     override suspend fun executeCommand(args: String): CommandResult {

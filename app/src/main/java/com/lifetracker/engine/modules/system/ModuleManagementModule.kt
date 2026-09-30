@@ -2,6 +2,7 @@ package com.lifetracker.engine.modules.system
 
 import com.lifetracker.engine.core.model.BlockUiModel
 import com.lifetracker.engine.core.module.CommandResult
+import com.lifetracker.engine.core.module.CommandSuggestion
 import com.lifetracker.engine.core.module.EngineModule
 import com.lifetracker.engine.core.module.ModuleRegistry
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,27 @@ class ModuleManagementModule(
 
     private val _blockFlow = MutableStateFlow<BlockUiModel?>(null)
     override val blockFlow: StateFlow<BlockUiModel?> = _blockFlow.asStateFlow()
+
+    override fun getSuggestions(args: String): List<CommandSuggestion> {
+        val query = args.trim().lowercase()
+        val visualMods = moduleRegistry.getVisualModules().map { it.id }
+        val base = listOf(
+            CommandSuggestion("mod edit", "mod edit", true),
+            CommandSuggestion("mod list", "mod list", true),
+            CommandSuggestion("mod up ", "mod up <id>", false),
+            CommandSuggestion("mod down ", "mod down <id>", false),
+            CommandSuggestion("mod hide ", "mod hide <id>", false),
+            CommandSuggestion("mod show ", "mod show <id>", false)
+        )
+        if (query.startsWith("up ") || query.startsWith("down ") || query.startsWith("hide ") || query.startsWith("show ")) {
+            val sub = query.substringBefore(" ")
+            val param = query.substringAfter(" ").trim()
+            return visualMods.filter { it.contains(param) }.map { id ->
+                CommandSuggestion("mod $sub $id", "mod $sub $id", true)
+            }
+        }
+        return if (query.isEmpty()) base else base.filter { it.command.contains(query) }
+    }
 
     override suspend fun executeCommand(args: String): CommandResult {
         val tokens = args.trim().split("\\s+".toRegex())
