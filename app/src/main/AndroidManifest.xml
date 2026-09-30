@@ -26,6 +26,7 @@
             android:exported="true"
             android:launchMode="singleTask"
             android:stateNotNeeded="true"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|uiMode"
             android:theme="@style/Theme.ModularLifeTrackerEngine"
             android:windowSoftInputMode="adjustResize">
             

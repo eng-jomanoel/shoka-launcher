@@ -6,6 +6,7 @@ import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
+import com.lifetracker.engine.core.audio.AudioPlayerManager
 import org.luaj.vm2.Globals
 import org.luaj.vm2.LuaTable
 import org.luaj.vm2.LuaValue
@@ -24,11 +25,16 @@ class LuaEngineBridge(
     var onMusicComplete: () -> Unit = {},
     var onMusicStateChanged: () -> Unit = {}
 ) {
-    private var mediaPlayer: MediaPlayer? = null
-    private var currentPlayingPath: String? = null
-    @Volatile private var isPlayingState: Boolean = false
-    @Volatile private var isPausedState: Boolean = false
     private val mainHandler = Handler(Looper.getMainLooper())
+
+    init {
+        AudioPlayerManager.onCompletionListener = {
+            onMusicComplete()
+        }
+        AudioPlayerManager.onStateChangedListener = {
+            onMusicStateChanged()
+        }
+    }
 
 
     private val audioExtensions = setOf("mp3", "m4a", "aac", "flac", "wav", "ogg", "opus")
@@ -42,64 +48,54 @@ class LuaEngineBridge(
         audio.set("play", object : OneArgFunction() {
             override fun call(arg: LuaValue): LuaValue {
                 val path = arg.checkjstring()
-                playAudio(path)
-                return LuaValue.TRUE
+                val ok = AudioPlayerManager.play(path, baseDir)
+                return LuaValue.valueOf(ok)
             }
         })
         audio.set("pause", object : ZeroArgFunction() {
             override fun call(): LuaValue {
-                pauseAudio()
+                AudioPlayerManager.pause()
                 return LuaValue.TRUE
             }
         })
         audio.set("resume", object : ZeroArgFunction() {
             override fun call(): LuaValue {
-                resumeAudio()
+                AudioPlayerManager.resume()
                 return LuaValue.TRUE
             }
         })
         audio.set("stop", object : ZeroArgFunction() {
             override fun call(): LuaValue {
-                stopAudio()
+                AudioPlayerManager.stop()
                 return LuaValue.TRUE
             }
         })
         audio.set("is_playing", object : ZeroArgFunction() {
             override fun call(): LuaValue {
-                val actual = try { mediaPlayer?.isPlaying == true } catch (_: Exception) { false }
-                val playing = actual || (isPlayingState && !isPausedState)
-                return LuaValue.valueOf(playing)
+                return LuaValue.valueOf(AudioPlayerManager.isActuallyPlaying())
             }
         })
         audio.set("get_position", object : ZeroArgFunction() {
             override fun call(): LuaValue {
-                return try {
-                    LuaValue.valueOf(mediaPlayer?.currentPosition ?: 0)
-                } catch (_: Exception) {
-                    LuaValue.valueOf(0)
-                }
+                return LuaValue.valueOf(AudioPlayerManager.getPosition())
             }
         })
         audio.set("get_duration", object : ZeroArgFunction() {
             override fun call(): LuaValue {
-                return try {
-                    LuaValue.valueOf(mediaPlayer?.duration ?: 0)
-                } catch (_: Exception) {
-                    LuaValue.valueOf(0)
-                }
+                return LuaValue.valueOf(AudioPlayerManager.getDuration())
             }
         })
-
         audio.set("seek", object : OneArgFunction() {
             override fun call(arg: LuaValue): LuaValue {
                 val ms = arg.checkint()
-                mediaPlayer?.seekTo(ms)
+                AudioPlayerManager.seekTo(ms)
                 return LuaValue.TRUE
             }
         })
         audio.set("current_path", object : ZeroArgFunction() {
             override fun call(): LuaValue {
-                return if (currentPlayingPath != null) LuaValue.valueOf(currentPlayingPath) else LuaValue.NIL
+                val path = AudioPlayerManager.currentPath
+                return if (path != null) LuaValue.valueOf(path) else LuaValue.NIL
             }
         })
         engine.set("audio", audio)
@@ -296,87 +292,8 @@ class LuaEngineBridge(
         return rootTable
     }
 
-    private fun playAudio(path: String) {
-        isPlayingState = true
-        isPausedState = false
-        mainHandler.post {
-            try {
-                mediaPlayer?.release()
-                currentPlayingPath = path
-                mediaPlayer = MediaPlayer().apply {
-                    val file = if (path.startsWith("/")) File(path) else File(baseDir, path)
-                    setDataSource(file.absolutePath)
-                    prepare()
-                    start()
-                    setOnCompletionListener {
-                        isPlayingState = false
-                        isPausedState = false
-                        onMusicStateChanged()
-                        onMusicComplete()
-                    }
-                }
-                onMusicStateChanged()
-            } catch (e: Exception) {
-                isPlayingState = false
-                isPausedState = false
-                e.printStackTrace()
-                Toast.makeText(context, "Erro ao tocar áudio: ${e.message}", Toast.LENGTH_SHORT).show()
-                onMusicStateChanged()
-            }
-        }
-    }
-
-    private fun pauseAudio() {
-        isPlayingState = false
-        isPausedState = true
-        mainHandler.post {
-            try {
-                if (mediaPlayer?.isPlaying == true) {
-                    mediaPlayer?.pause()
-                }
-                onMusicStateChanged()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-
-    private fun resumeAudio() {
-        isPlayingState = true
-        isPausedState = false
-        mainHandler.post {
-            try {
-                if (mediaPlayer?.isPlaying == false) {
-                    mediaPlayer?.start()
-                }
-                onMusicStateChanged()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-
-    private fun stopAudio() {
-        isPlayingState = false
-        isPausedState = false
-        mainHandler.post {
-            try {
-                mediaPlayer?.stop()
-                mediaPlayer?.release()
-                mediaPlayer = null
-                currentPlayingPath = null
-                onMusicStateChanged()
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-    }
-
     fun release() {
-        try {
-            mediaPlayer?.release()
-            mediaPlayer = null
-            currentPlayingPath = null
-        } catch (_: Exception) {}
+        AudioPlayerManager.onCompletionListener = null
+        AudioPlayerManager.onStateChangedListener = null
     }
 }

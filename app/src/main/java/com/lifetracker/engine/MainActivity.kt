@@ -19,12 +19,32 @@ import com.lifetracker.engine.ui.theme.ModularLifeTrackerTheme
 
 class MainActivity : ComponentActivity() {
 
-    private val moduleRegistry by lazy { ModuleRegistry(applicationContext) }
+    companion object {
+        @Volatile
+        private var isInitialized = false
+
+        lateinit var moduleRegistry: ModuleRegistry
+            private set
+        lateinit var themeModule: ThemeModule
+            private set
+        lateinit var luaManager: com.lifetracker.engine.modules.lua.LuaModuleManager
+            private set
+
+        var currentActivity: MainActivity? = null
+            private set
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        currentActivity = this
         
-        val themeModule = ThemeModule(applicationContext)
+        val appCtx = applicationContext
+        if (!isInitialized) {
+            themeModule = ThemeModule(appCtx)
+            moduleRegistry = ModuleRegistry(appCtx)
+            registerInitialModules(appCtx, themeModule)
+            isInitialized = true
+        }
 
         // Imersão Total: Esconde barra de status e navegação para tela inteira real
         enableEdgeToEdge()
@@ -33,8 +53,6 @@ class MainActivity : ComponentActivity() {
             hide(WindowInsetsCompat.Type.systemBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
-
-        registerInitialModules(themeModule)
 
         setContent {
             val engineColors by themeModule.currentTheme.collectAsState()
@@ -45,8 +63,14 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        currentActivity = this
+    }
+
     override fun onResume() {
         super.onResume()
+        currentActivity = this
         
         try {
             val dpm = getSystemService(android.content.Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
@@ -66,32 +90,41 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun registerInitialModules(themeModule: ThemeModule) {
+    override fun onDestroy() {
+        if (currentActivity == this) {
+            currentActivity = null
+        }
+        super.onDestroy()
+    }
+
+    private fun registerInitialModules(appCtx: android.content.Context, themeModule: ThemeModule) {
         moduleRegistry.register(themeModule)
         
-        val appLauncher = com.lifetracker.engine.modules.system.AppLauncherModule(applicationContext) { intent ->
+        val appLauncher = com.lifetracker.engine.modules.system.AppLauncherModule(appCtx) { intent ->
             try {
                 // Remove o pin temporariamente para permitir que outro app venha para a frente
-                stopLockTask()
+                currentActivity?.stopLockTask()
             } catch (e: Exception) {
                 e.printStackTrace()
             }
-            startActivity(intent)
+            intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            appCtx.startActivity(intent)
         }
         moduleRegistry.register(appLauncher)
 
         // Gerenciador de Módulos Dinâmicos Lua
-        val luaManager = com.lifetracker.engine.modules.lua.LuaModuleManager(
-            context = applicationContext,
+        luaManager = com.lifetracker.engine.modules.lua.LuaModuleManager(
+            context = appCtx,
             moduleRegistry = moduleRegistry,
             onOpenApp = { query ->
                 // Permite que scripts Lua abram apps do sistema
                 try {
-                    val pm = applicationContext.packageManager
+                    val pm = appCtx.packageManager
                     val intent = pm.getLaunchIntentForPackage(query)
                     if (intent != null) {
-                        try { stopLockTask() } catch (_: Exception) {}
-                        startActivity(intent)
+                        try { currentActivity?.stopLockTask() } catch (_: Exception) {}
+                        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                        appCtx.startActivity(intent)
                     }
                 } catch (e: Exception) {
                     e.printStackTrace()
@@ -101,17 +134,18 @@ class MainActivity : ComponentActivity() {
         luaManager.init()
 
         moduleRegistry.register(com.lifetracker.engine.modules.system.SysCtlModule(
-            context = applicationContext,
+            context = appCtx,
             onBrightnessChange = { brightness ->
-                // Modifica o brilho da janela da Activity
-                val layoutParams = window.attributes
-                // O Android espera um valor de 0.0 a 1.0. Menos que 0 retorna ao brilho automático do sistema.
-                layoutParams.screenBrightness = brightness.coerceIn(0.01f, 1f)
-                window.attributes = layoutParams
+                // Modifica o brilho da janela da Activity ativa
+                currentActivity?.let { act ->
+                    val layoutParams = act.window.attributes
+                    layoutParams.screenBrightness = brightness.coerceIn(0.01f, 1f)
+                    act.window.attributes = layoutParams
+                }
             },
             onUnpin = {
                 try {
-                    stopLockTask()
+                    currentActivity?.stopLockTask()
                 } catch (e: Exception) {
                     e.printStackTrace()
                 }
