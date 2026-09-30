@@ -94,6 +94,27 @@ sealed interface BlockUiModel {
         val incRepsCmd: String = "g r+"
     ) : BlockUiModel
 
+    /**
+     * Bloco de Anotações e Tarefas / Checklist
+     */
+    data class Notes(
+        override val moduleId: String,
+        override val title: String,
+        val subtitle: String? = null,
+        val isOpen: Boolean = true,
+        val items: List<NoteItem> = emptyList(),
+        val actions: List<BlockAction> = emptyList()
+    ) : BlockUiModel
+
+    data class NoteItem(
+        val id: Int,
+        val text: String,
+        val isChecklist: Boolean = false,
+        val isChecked: Boolean = false,
+        val toggleCommand: String? = null,
+        val deleteCommand: String? = null
+    )
+
     data class BlockAction(
         val label: String,
         val commandToExecute: String

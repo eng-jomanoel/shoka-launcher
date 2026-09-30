@@ -289,9 +289,54 @@ class LuaModule(
             )
         }
 
+        // Verifica se é tipo Notes (Anotações e Checklist)
+        if (type == "notes") {
+            val items = mutableListOf<BlockUiModel.NoteItem>()
+            val itemsVal = table.get("items")
+            if (!itemsVal.isnil() && itemsVal.istable()) {
+                val itemTable = itemsVal.checktable()
+                for (i in 1..itemTable.length()) {
+                    val it = itemTable.get(i)
+                    if (it.istable()) {
+                        items.add(BlockUiModel.NoteItem(
+                            id = it.get("id").optint(i),
+                            text = it.get("text").optjstring(""),
+                            isChecklist = it.get("is_checklist").optboolean(false) || it.get("checklist").optboolean(false),
+                            isChecked = it.get("is_checked").optboolean(false) || it.get("checked").optboolean(false),
+                            toggleCommand = if (it.get("toggle_cmd").isnil()) null else it.get("toggle_cmd").tojstring(),
+                            deleteCommand = if (it.get("delete_cmd").isnil()) null else it.get("delete_cmd").tojstring()
+                        ))
+                    }
+                }
+            }
+
+            val actions = mutableListOf<BlockUiModel.BlockAction>()
+            val actionsVal = table.get("actions")
+            if (!actionsVal.isnil() && actionsVal.istable()) {
+                val actionTable = actionsVal.checktable()
+                for (i in 1..actionTable.length()) {
+                    val act = actionTable.get(i)
+                    if (act.istable()) {
+                        actions.add(BlockUiModel.BlockAction(
+                            label = act.get("label").optjstring("[Botão]"),
+                            commandToExecute = act.get("cmd").optjstring("")
+                        ))
+                    }
+                }
+            }
+
+            return BlockUiModel.Notes(
+                moduleId = id,
+                title = blockTitle,
+                subtitle = if (table.get("subtitle").isnil()) null else table.get("subtitle").tojstring(),
+                isOpen = table.get("is_open").optboolean(true),
+                items = items,
+                actions = actions
+            )
+        }
 
         // Verifica se é tipo Media (Player de música rico)
-        if (type == "media" || !table.get("cover").isnil() || !table.get("items").isnil()) {
+        if (type == "media" || !table.get("cover").isnil()) {
             val actions = mutableListOf<BlockUiModel.BlockAction>()
             val actionsVal = table.get("actions")
             if (!actionsVal.isnil() && actionsVal.istable()) {

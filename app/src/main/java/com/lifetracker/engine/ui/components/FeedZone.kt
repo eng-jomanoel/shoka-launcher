@@ -57,6 +57,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.lifetracker.engine.core.model.BlockUiModel
 import com.lifetracker.engine.ui.theme.EngineTheme
@@ -194,6 +195,7 @@ fun FeedZone(
                     is BlockUiModel.Interactive -> InteractiveCard(block, onActionClick)
                     is BlockUiModel.Media -> MediaCard(block, onActionClick)
                     is BlockUiModel.Workout -> WorkoutCard(block, onActionClick)
+                    is BlockUiModel.Notes -> NotesCard(block, onActionClick)
                 }
             }
         }
@@ -1197,6 +1199,151 @@ private fun WorkoutCard(
                             )
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotesCard(
+    block: BlockUiModel.Notes,
+    onActionClick: (String) -> Unit
+) {
+    CardContainer {
+        // ── Header ──
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = block.title, style = EngineTypography.titleMedium)
+                if (!block.subtitle.isNullOrEmpty()) {
+                    Text(
+                        text = block.subtitle,
+                        style = EngineTypography.labelSmall,
+                        color = EngineTheme.colors.textSecondary
+                    )
+                }
+            }
+
+            // Contagem de itens checklist
+            if (block.items.isNotEmpty()) {
+                val checked = block.items.count { it.isChecklist && it.isChecked }
+                val checklists = block.items.count { it.isChecklist }
+                if (checklists > 0) {
+                    Text(
+                        text = "$checked/$checklists",
+                        style = EngineTypography.labelSmall,
+                        color = EngineTheme.colors.accentGreen
+                    )
+                }
+            }
+        }
+
+        if (block.isOpen && block.items.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 300.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                block.items.forEach { item ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(4.dp))
+                            .then(
+                                if (item.isChecklist && item.toggleCommand != null) {
+                                    Modifier.clickable { onActionClick(item.toggleCommand) }
+                                } else Modifier
+                            )
+                            .padding(vertical = 4.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (item.isChecklist) {
+                            // Checkbox visual
+                            val boxColor = if (item.isChecked) EngineTheme.colors.accentGreen
+                                else EngineTheme.colors.cardBorder
+                            Box(
+                                modifier = Modifier
+                                    .size(18.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .border(1.5f.dp, boxColor, RoundedCornerShape(3.dp))
+                                    .background(
+                                        if (item.isChecked) EngineTheme.colors.accentGreen.copy(alpha = 0.15f)
+                                        else Color.Transparent
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (item.isChecked) {
+                                    Text(
+                                        text = "✓",
+                                        style = EngineTypography.labelSmall,
+                                        color = EngineTheme.colors.accentGreen
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                        } else {
+                            // Bullet simples
+                            Text(
+                                text = "•",
+                                style = EngineTypography.bodyMedium,
+                                color = EngineTheme.colors.accentCyan,
+                                modifier = Modifier.padding(end = 8.dp)
+                            )
+                        }
+
+                        // Texto do item
+                        Text(
+                            text = item.text,
+                            style = EngineTypography.bodyMedium,
+                            color = if (item.isChecked) EngineTheme.colors.textMuted
+                                else EngineTheme.colors.textPrimary,
+                            textDecoration = if (item.isChecked) TextDecoration.LineThrough
+                                else TextDecoration.None,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        // Botão de deletar
+                        if (item.deleteCommand != null) {
+                            Text(
+                                text = "✕",
+                                style = EngineTypography.labelSmall,
+                                color = EngineTheme.colors.accentRed.copy(alpha = 0.6f),
+                                modifier = Modifier
+                                    .clickable { onActionClick(item.deleteCommand) }
+                                    .padding(start = 8.dp, top = 2.dp, bottom = 2.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Actions ──
+        if (block.actions.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+            ) {
+                block.actions.forEach { action ->
+                    Text(
+                        text = action.label,
+                        style = EngineTypography.titleMedium,
+                        color = EngineTheme.colors.accentCyan,
+                        modifier = Modifier
+                            .clickable { onActionClick(action.commandToExecute) }
+                            .padding(vertical = 4.dp)
+                    )
                 }
             }
         }

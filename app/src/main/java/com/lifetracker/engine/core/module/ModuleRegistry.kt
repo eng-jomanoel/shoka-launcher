@@ -187,11 +187,15 @@ class ModuleRegistry(
         val prefix = parts[0].lowercase()
         val args = if (parts.size > 1) parts[1] else ""
 
+        if (prefix == "clear" || prefix == "cls") {
+            return CommandResult.Ignored
+        }
+
         if (prefix == "help") {
             val helpList = _modules.value.joinToString("\n") { mod ->
                 "[${mod.commandPrefix}] ${mod.helpText}"
             }
-            return CommandResult.Success("Comandos disponíveis:\n$helpList")
+            return CommandResult.Success("Comandos disponíveis:\n$helpList\n[clear] Limpa o terminal")
         }
 
         val targetModule = _modules.value.firstOrNull { 
@@ -228,6 +232,9 @@ class ModuleRegistry(
             
             if ("help".startsWith(prefix)) {
                 results.add(CommandSuggestion("help", "help", true))
+            }
+            if ("clear".startsWith(prefix)) {
+                results.add(CommandSuggestion("clear", "clear", true))
             }
 
             for (mod in matchingModules) {

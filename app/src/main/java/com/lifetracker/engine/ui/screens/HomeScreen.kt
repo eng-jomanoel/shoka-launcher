@@ -50,6 +50,7 @@ fun HomeScreen(
     var lastCommandResult by remember { mutableStateOf<CommandResult?>(null) }
     var currentInput by remember { mutableStateOf("") }
     var isDefault by remember { mutableStateOf(isDefaultLauncher(context)) }
+    var clearResultJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
     // Atualiza o banner sempre que o app volta para a tela (ex: ao voltar das configurações)
     DisposableEffect(lifecycleOwner) {
@@ -67,6 +68,9 @@ fun HomeScreen(
     BackHandler(enabled = true) {
         if (currentInput.isNotEmpty()) {
             currentInput = ""
+        } else if (lastCommandResult != null) {
+            clearResultJob?.cancel()
+            lastCommandResult = null
         }
     }
 
@@ -75,9 +79,24 @@ fun HomeScreen(
 
     val executeCommand: (String) -> Unit = { command ->
         coroutineScope.launch {
-            val result = moduleRegistry.dispatch(command)
-            lastCommandResult = result
-            currentInput = ""
+            clearResultJob?.cancel()
+            val trimmed = command.trim()
+            if (trimmed.equals("clear", ignoreCase = true) || trimmed.equals("cls", ignoreCase = true)) {
+                lastCommandResult = null
+                currentInput = ""
+            } else {
+                val result = moduleRegistry.dispatch(command)
+                lastCommandResult = result
+                currentInput = ""
+                // Faz a mensagem de retorno sumir automaticamente após 4 segundos (exceto telas longas como help)
+                if (result !is CommandResult.Ignored) {
+                    val delayMs = if (trimmed.equals("help", ignoreCase = true)) 10000L else 4000L
+                    clearResultJob = coroutineScope.launch {
+                        kotlinx.coroutines.delay(delayMs)
+                        lastCommandResult = null
+                    }
+                }
+            }
         }
     }
 
