@@ -1,0 +1,56 @@
+<resources>
+    <string name="app_name">Life Tracker Engine</string>
+    
+    <!-- UI -->
+    <string name="cli_hint">digite um comando (ou \'help\')...</string>
+    <string name="cli_enter">[ENTER]</string>
+    <string name="bat_prefix">BAT: %1$d%%</string>
+    <string name="set_default_launcher">⚠️ Clique aqui para definir como Launcher Padrão</string>
+
+    <!-- Water Module -->
+    <string name="water_module_name">Hidratação</string>
+    <string name="water_help_text">a &lt;ml | reset&gt; - Ex: \'a 350\' para registrar água</string>
+    <string name="water_help_full">MÓDULO ÁGUA (a)\n  a &lt;quantidade&gt; : Adiciona ml (ex: \'a 250\')\n  a reset        : Zera o contador diário\n  a -h           : Mostra esta ajuda</string>
+    <string name="water_daily">Água Diária</string>
+    <string name="water_reset">Consumo de água zerado.</string>
+    <string name="water_added">+%1$d ml adicionados. Total: %2$d ml / %3$d ml</string>
+    <string name="water_usage">Uso: a &lt;quantidade_ml&gt; ou a reset. Digite \'a -h\' para ajuda.</string>
+
+    <!-- Gym Module -->
+    <string name="gym_module_name">Gym Tracker</string>
+    <string name="gym_help_text">g &lt;exercicio carga series&gt; | g check | g finish</string>
+    <string name="gym_help_full">MÓDULO GYM (g)\n  g &lt;exercicio&gt; : Adiciona exercício (ex: \'g supino 80kg\')\n  g check       : Marca o atual como concluído\n  g finish      : Finaliza o treino do dia\n  g -h          : Mostra esta ajuda</string>
+    <string name="gym_workout_chest">Treino: Peito &amp; Tríceps</string>
+    <string name="gym_status">%1$d/%2$d feitos • Próximo: %3$s</string>
+    <string name="gym_completed">Treino Concluído!</string>
+    <string name="gym_action_check">[+Check]</string>
+    <string name="gym_action_finish">[Finalizar]</string>
+    <string name="gym_check_success">Exercício concluído! Restam %1$d.</string>
+    <string name="gym_check_all_done">Todos os exercícios já foram concluídos.</string>
+    <string name="gym_finish_success">Treino do dia finalizado. Bom trabalho!</string>
+    <string name="gym_add_success">Exercício adicionado: \'%1$s\'</string>
+    <string name="gym_usage">Uso: g &lt;exercício&gt; ou \'g check\' ou \'g finish\'. Digite \'g -h\' para ajuda.</string>
+
+    <!-- Theme Module -->
+    <string name="theme_module_name">Tema</string>
+    <string name="theme_help_text">t &lt;nome do tema&gt; - Troca o tema (amoled, dark, light)</string>
+    <string name="theme_help_full">MÓDULO DE TEMA (t)\n  t amoled     : Fundo AMOLED preto profundo\n  t dark       : Fundo Solarized Dark\n  t light      : Fundo Solarized Light\n  t toggle     : Alterna entre os três temas\n  t -h         : Mostra esta ajuda</string>
+    <string name="theme_toggled">Tema alternado!</string>
+    <string name="theme_changed_amoled">Tema alterado para AMOLED (Minimalista)</string>
+    <string name="theme_changed_dark">Tema alterado para Solarized Dark</string>
+    <string name="theme_changed_light">Tema alterado para Solarized Light</string>
+    <string name="theme_unknown">Tema desconhecido: \'%1$s\'</string>
+
+    <!-- App Launcher Module -->
+    <string name="app_launcher_name">Launcher</string>
+    <string name="app_launcher_help_text">o &lt;nome do app&gt; - Abre um aplicativo do sistema</string>
+    <string name="app_launcher_help_full">MÓDULO OPEN (o)\nAbre aplicativos do sistema. Ele aceita partes do nome do aplicativo.\n  o &lt;app&gt;  : Abre o app (ex: \'o cam\', \'o wpp\')\n  o -l     : Lista todos os aplicativos instalados\n  o -h     : Mostra esta ajuda</string>
+    <string name="app_installed_apps">APPS INSTALADOS:\n%1$s</string>
+    <string name="app_usage">Uso: o &lt;nome do app&gt;. Digite \'o -h\' para ajuda.</string>
+    <string name="app_not_found">Nenhum app encontrado com \'%1$s\'</string>
+    <string name="app_multiple">Múltiplos apps: %1$s... Seja mais específico.</string>
+    <string name="app_opening">Abrindo %1$s...</string>
+    <string name="app_cannot_open">App \'%1$s\' não pode ser aberto.</string>
+    <string name="app_error">Erro ao iniciar o app.</string>
+
+</resources>

@@ -1,0 +1,56 @@
+<resources>
+    <string name="app_name">Life Tracker Engine</string>
+    
+    <!-- UI -->
+    <string name="cli_hint">type a command (or \'help\')...</string>
+    <string name="cli_enter">[ENTER]</string>
+    <string name="bat_prefix">BAT: %1$d%%</string>
+    <string name="set_default_launcher">⚠️ Tap here to set as Default Launcher</string>
+
+    <!-- Water Module -->
+    <string name="water_module_name">Hydration</string>
+    <string name="water_help_text">a &lt;ml | reset&gt; - Ex: \'a 350\' to track water</string>
+    <string name="water_help_full">WATER MODULE (a)\n  a &lt;amount&gt; : Adds ml (ex: \'a 250\')\n  a reset        : Resets daily counter\n  a -h           : Shows this help</string>
+    <string name="water_daily">Daily Water</string>
+    <string name="water_reset">Water intake reset.</string>
+    <string name="water_added">+%1$d ml added. Total: %2$d ml / %3$d ml</string>
+    <string name="water_usage">Usage: a &lt;amount_ml&gt; or a reset. Type \'a -h\' for help.</string>
+
+    <!-- Gym Module -->
+    <string name="gym_module_name">Gym Tracker</string>
+    <string name="gym_help_text">g &lt;exercise weight sets&gt; | g check | g finish</string>
+    <string name="gym_help_full">GYM MODULE (g)\n  g &lt;exercise&gt; : Adds exercise (ex: \'g bench 80kg\')\n  g check       : Marks current as done\n  g finish      : Finishes daily workout\n  g -h          : Shows this help</string>
+    <string name="gym_workout_chest">Workout: Chest &amp; Triceps</string>
+    <string name="gym_status">%1$d/%2$d done • Next: %3$s</string>
+    <string name="gym_completed">Workout Completed!</string>
+    <string name="gym_action_check">[+Check]</string>
+    <string name="gym_action_finish">[Finish]</string>
+    <string name="gym_check_success">Exercise completed! %1$d remaining.</string>
+    <string name="gym_check_all_done">All exercises are already completed.</string>
+    <string name="gym_finish_success">Daily workout finished. Good job!</string>
+    <string name="gym_add_success">Exercise added: \'%1$s\'</string>
+    <string name="gym_usage">Usage: g &lt;exercise&gt; or \'g check\' or \'g finish\'. Type \'g -h\' for help.</string>
+    
+    <!-- Theme Module -->
+    <string name="theme_module_name">Theme</string>
+    <string name="theme_help_text">t &lt;theme name&gt; - Changes theme (amoled, dark, light)</string>
+    <string name="theme_help_full">THEME MODULE (t)\n  t amoled     : Deep black AMOLED background\n  t dark       : Solarized Dark background\n  t light      : Solarized Light background\n  t toggle     : Toggles between the three themes\n  t -h         : Shows this help</string>
+    <string name="theme_toggled">Theme toggled!</string>
+    <string name="theme_changed_amoled">Theme changed to AMOLED (Minimalist)</string>
+    <string name="theme_changed_dark">Theme changed to Solarized Dark</string>
+    <string name="theme_changed_light">Theme changed to Solarized Light</string>
+    <string name="theme_unknown">Unknown theme: \'%1$s\'</string>
+
+    <!-- App Launcher Module -->
+    <string name="app_launcher_name">Launcher</string>
+    <string name="app_launcher_help_text">o &lt;app name&gt; - Opens a system app</string>
+    <string name="app_launcher_help_full">OPEN MODULE (o)\nOpens system applications. It accepts parts of the application name.\n  o &lt;app&gt;  : Opens the app (ex: \'o cam\', \'o wpp\')\n  o -l     : Lists all installed apps\n  o -h     : Shows this help</string>
+    <string name="app_installed_apps">INSTALLED APPS:\n%1$s</string>
+    <string name="app_usage">Usage: o &lt;app name&gt;. Type \'o -h\' for help.</string>
+    <string name="app_not_found">No app found with \'%1$s\'</string>
+    <string name="app_multiple">Multiple apps: %1$s... Be more specific.</string>
+    <string name="app_opening">Opening %1$s...</string>
+    <string name="app_cannot_open">App \'%1$s\' cannot be opened.</string>
+    <string name="app_error">Error launching app.</string>
+
+</resources>
