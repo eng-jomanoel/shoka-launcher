@@ -167,6 +167,29 @@ class LuaModule(
                 }
             }
 
+            val days = mutableListOf<BlockUiModel.WorkoutDayItem>()
+            val daysVal = table.get("days")
+            if (!daysVal.isnil() && daysVal.istable()) {
+                val dayTable = daysVal.checktable()
+                for (i in 1..dayTable.length()) {
+                    val d = dayTable.get(i)
+                    if (d.istable()) {
+                        days.add(BlockUiModel.WorkoutDayItem(
+                            dayId = d.get("day_id").optjstring(""),
+                            label = d.get("label").optjstring("Dia"),
+                            isCurrent = d.get("is_current").optboolean(false),
+                            isToday = d.get("is_today").optboolean(false),
+                            commandToExecute = d.get("cmd").optjstring("")
+                        ))
+                    }
+                }
+            }
+
+            val decWeightCmd = table.get("dec_weight_cmd").optjstring("g w-")
+            val incWeightCmd = table.get("inc_weight_cmd").optjstring("g w+")
+            val decRepsCmd = table.get("dec_reps_cmd").optjstring("g r-")
+            val incRepsCmd = table.get("inc_reps_cmd").optjstring("g r+")
+
             val weightVal = table.get("weight")
             val weightFloat = if (!weightVal.isnil()) weightVal.tofloat() else 0f
 
@@ -186,9 +209,15 @@ class LuaModule(
                 progressText = table.get("progress_text").optjstring(null),
                 actions = actions,
                 exercises = exercises,
-                showExerciseList = table.get("show_list").optboolean(false)
+                showExerciseList = table.get("show_list").optboolean(false),
+                days = days,
+                decWeightCmd = decWeightCmd,
+                incWeightCmd = incWeightCmd,
+                decRepsCmd = decRepsCmd,
+                incRepsCmd = incRepsCmd
             )
         }
+
 
         // Verifica se é tipo Media (Player de música rico)
         if (type == "media" || !table.get("cover").isnil() || !table.get("items").isnil()) {

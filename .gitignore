@@ -25,3 +25,6 @@ local.properties
 
 # Screenshots
 screen*.png
+
+# Kotlin
+.kotlin/

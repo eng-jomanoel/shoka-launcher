@@ -84,7 +84,12 @@ sealed interface BlockUiModel {
         val progressText: String? = null,
         val actions: List<BlockAction> = emptyList(),
         val exercises: List<WorkoutExerciseItem> = emptyList(),
-        val showExerciseList: Boolean = false
+        val showExerciseList: Boolean = false,
+        val days: List<WorkoutDayItem> = emptyList(),
+        val decWeightCmd: String = "g w-",
+        val incWeightCmd: String = "g w+",
+        val decRepsCmd: String = "g r-",
+        val incRepsCmd: String = "g r+"
     ) : BlockUiModel
 
     data class BlockAction(
@@ -107,4 +112,13 @@ sealed interface BlockUiModel {
         val isCurrent: Boolean,
         val commandToExecute: String
     )
+
+    data class WorkoutDayItem(
+        val dayId: String,
+        val label: String,
+        val isCurrent: Boolean,
+        val isToday: Boolean = false,
+        val commandToExecute: String
+    )
 }
+

@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
@@ -700,6 +701,41 @@ private fun WorkoutCard(
             }
         }
 
+        // Day / Routine Selector Chips
+        if (block.days.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                block.days.forEach { day ->
+                    val isSelected = day.isCurrent
+                    val bg = if (isSelected) EngineTheme.colors.accentAmber.copy(alpha = 0.2f) else EngineTheme.colors.card
+                    val borderCol = if (isSelected) EngineTheme.colors.accentAmber else EngineTheme.colors.cardBorder
+                    val txtCol = if (isSelected) EngineTheme.colors.accentAmber else EngineTheme.colors.textMuted
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(bg)
+                            .border(1.dp, borderCol, RoundedCornerShape(4.dp))
+                            .clickable { onActionClick(day.commandToExecute) }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = day.label,
+                            style = EngineTypography.labelSmall,
+                            color = txtCol,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(10.dp))
 
         // Main Exercise Info
@@ -744,28 +780,131 @@ private fun WorkoutCard(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Load / Weight & Reps Counter
+        // Load / Weight & Reps Stepper Controls
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(EngineTheme.colors.background, RoundedCornerShape(6.dp))
-                .border(1.dp, EngineTheme.colors.cardBorder, RoundedCornerShape(6.dp))
-                .padding(vertical = 8.dp, horizontal = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            val weightStr = if (block.weight % 1f == 0f) "${block.weight.toInt()} KG" else "${block.weight} KG"
-            Text(
-                text = "CARGA: $weightStr",
-                style = EngineTypography.titleMedium,
-                color = EngineTheme.colors.textPrimary
-            )
-            Text(
-                text = "FEITAS: ${block.repsLogged} REPS",
-                style = EngineTypography.titleMedium,
-                color = EngineTheme.colors.accentGreen
-            )
+            // Weight Stepper (Left Box)
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .background(EngineTheme.colors.background, RoundedCornerShape(6.dp))
+                    .border(1.dp, EngineTheme.colors.cardBorder, RoundedCornerShape(6.dp))
+                    .padding(vertical = 4.dp, horizontal = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Minus Weight Button
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(EngineTheme.colors.card)
+                        .border(1.dp, EngineTheme.colors.cardBorder, RoundedCornerShape(4.dp))
+                        .clickable { onActionClick(block.decWeightCmd) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "−",
+                        style = EngineTypography.titleMedium,
+                        color = EngineTheme.colors.accentAmber
+                    )
+                }
+
+                // Weight Label
+                val weightStr = if (block.weight % 1f == 0f) "${block.weight.toInt()} KG" else "${block.weight} KG"
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "CARGA",
+                        style = EngineTypography.labelSmall,
+                        color = EngineTheme.colors.textMuted
+                    )
+                    Text(
+                        text = weightStr,
+                        style = EngineTypography.titleMedium,
+                        color = EngineTheme.colors.textPrimary
+                    )
+                }
+
+                // Plus Weight Button
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(EngineTheme.colors.card)
+                        .border(1.dp, EngineTheme.colors.cardBorder, RoundedCornerShape(4.dp))
+                        .clickable { onActionClick(block.incWeightCmd) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "+",
+                        style = EngineTypography.titleMedium,
+                        color = EngineTheme.colors.accentAmber
+                    )
+                }
+            }
+
+            // Reps Stepper (Right Box)
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .background(EngineTheme.colors.background, RoundedCornerShape(6.dp))
+                    .border(1.dp, EngineTheme.colors.cardBorder, RoundedCornerShape(6.dp))
+                    .padding(vertical = 4.dp, horizontal = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Minus Reps Button
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(EngineTheme.colors.card)
+                        .border(1.dp, EngineTheme.colors.cardBorder, RoundedCornerShape(4.dp))
+                        .clickable { onActionClick(block.decRepsCmd) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "−",
+                        style = EngineTypography.titleMedium,
+                        color = EngineTheme.colors.accentGreen
+                    )
+                }
+
+                // Reps Label
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "REPS FEITAS",
+                        style = EngineTypography.labelSmall,
+                        color = EngineTheme.colors.textMuted
+                    )
+                    Text(
+                        text = "${block.repsLogged}",
+                        style = EngineTypography.titleMedium,
+                        color = EngineTheme.colors.accentGreen
+                    )
+                }
+
+                // Plus Reps Button
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(EngineTheme.colors.card)
+                        .border(1.dp, EngineTheme.colors.cardBorder, RoundedCornerShape(4.dp))
+                        .clickable { onActionClick(block.incRepsCmd) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "+",
+                        style = EngineTypography.titleMedium,
+                        color = EngineTheme.colors.accentGreen
+                    )
+                }
+            }
         }
+
 
         // Rest Timer Section (when active)
         if (block.isTimerActive) {
