@@ -123,7 +123,7 @@ fun HomeScreen(
         }
 
         val suggestions = remember(currentInput, activeBlocks) {
-            moduleRegistry.getSuggestions(currentInput)
+            if (currentInput.isBlank()) emptyList() else moduleRegistry.getSuggestions(currentInput)
         }
 
         CliZone(
