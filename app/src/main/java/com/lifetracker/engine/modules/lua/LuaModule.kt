@@ -36,6 +36,8 @@ class LuaModule(
 
     private val _blockFlow = MutableStateFlow<BlockUiModel?>(null)
     override val blockFlow: StateFlow<BlockUiModel?> = _blockFlow.asStateFlow()
+    override val hasUi: Boolean
+        get() = true
 
     init {
         reload()

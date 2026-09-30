@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -83,53 +84,93 @@ fun FeedZone(
                         style = EngineTypography.labelSmall,
                         color = EngineTheme.colors.accentGreen
                     )
-                    Text(
-                        text = "[Salvar e Concluir]",
-                        style = EngineTypography.labelSmall,
-                        color = EngineTheme.colors.textPrimary,
-                        modifier = Modifier.clickable { onExitEditMode() }
-                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(EngineTheme.colors.cardBorder)
+                            .clickable { onExitEditMode() }
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "Salvar e Concluir",
+                            style = EngineTypography.labelSmall,
+                            color = EngineTheme.colors.textPrimary
+                        )
+                    }
                 }
             }
         }
 
-        items(blocks, key = { it.moduleId }) { block ->
-            Column {
+        itemsIndexed(blocks, key = { _, it -> it.moduleId }) { index, block ->
+            val canMoveUp = index > 0
+            val canMoveDown = index < blocks.size - 1
+
+            Column(modifier = Modifier.fillMaxWidth()) {
                 if (isEditMode) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = 4.dp, start = 4.dp, end = 4.dp),
+                            .padding(bottom = 6.dp, start = 4.dp, end = 4.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Módulo: ${block.moduleId}",
+                            text = "Módulo: ${block.moduleId} (#${index + 1})",
                             style = EngineTypography.labelSmall,
-                            color = EngineTheme.colors.textMuted
+                            color = EngineTheme.colors.accentAmber
                         )
-                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(
-                                text = "[▲ Sobe]",
-                                style = EngineTypography.labelSmall,
-                                color = EngineTheme.colors.accentGreen,
-                                modifier = Modifier.clickable { onMoveUp(block.moduleId) }
-                            )
-                            Text(
-                                text = "[▼ Desce]",
-                                style = EngineTypography.labelSmall,
-                                color = EngineTheme.colors.accentGreen,
-                                modifier = Modifier.clickable { onMoveDown(block.moduleId) }
-                            )
-                            Text(
-                                text = "[✕ Ocultar]",
-                                style = EngineTypography.labelSmall,
-                                color = EngineTheme.colors.accentRed,
-                                modifier = Modifier.clickable { onHide(block.moduleId) }
-                            )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            // Botão ▲ Sobe
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(if (canMoveUp) EngineTheme.colors.card else EngineTheme.colors.card.copy(alpha = 0.3f))
+                                    .border(1.dp, if (canMoveUp) EngineTheme.colors.accentGreen else EngineTheme.colors.cardBorder, RoundedCornerShape(4.dp))
+                                    .then(if (canMoveUp) Modifier.clickable { onMoveUp(block.moduleId) } else Modifier)
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "▲ Sobe",
+                                    style = EngineTypography.labelSmall,
+                                    color = if (canMoveUp) EngineTheme.colors.accentGreen else EngineTheme.colors.textMuted
+                                )
+                            }
+
+                            // Botão ▼ Desce
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(if (canMoveDown) EngineTheme.colors.card else EngineTheme.colors.card.copy(alpha = 0.3f))
+                                    .border(1.dp, if (canMoveDown) EngineTheme.colors.accentGreen else EngineTheme.colors.cardBorder, RoundedCornerShape(4.dp))
+                                    .then(if (canMoveDown) Modifier.clickable { onMoveDown(block.moduleId) } else Modifier)
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "▼ Desce",
+                                    style = EngineTypography.labelSmall,
+                                    color = if (canMoveDown) EngineTheme.colors.accentGreen else EngineTheme.colors.textMuted
+                                )
+                            }
+
+                            // Botão ✕ Ocultar
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(EngineTheme.colors.card)
+                                    .border(1.dp, EngineTheme.colors.accentRed, RoundedCornerShape(4.dp))
+                                    .clickable { onHide(block.moduleId) }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "✕ Ocultar",
+                                    style = EngineTypography.labelSmall,
+                                    color = EngineTheme.colors.accentRed
+                                )
+                            }
                         }
                     }
                 }
+
 
                 when (block) {
                     is BlockUiModel.Info -> InfoCard(block)

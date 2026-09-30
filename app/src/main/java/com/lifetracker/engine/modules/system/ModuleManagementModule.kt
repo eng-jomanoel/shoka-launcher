@@ -47,23 +47,21 @@ class ModuleManagementModule(
         }
 
         val allModules = moduleRegistry.modules.value
-        val order = moduleRegistry.moduleOrder.value
+        val visualMods = moduleRegistry.getVisualModules()
         val hidden = moduleRegistry.hiddenModules.value
-
-        // Ordena a lista atual
-        val sorted = allModules.sortedBy { mod ->
-            val idx = order.indexOf(mod.id)
-            if (idx == -1) 999 else idx
-        }
 
         if (subcmd == "list") {
             val sb = StringBuilder("MÓDULOS NA HOME (Ordem atual):\n")
-            sorted.forEachIndexed { index, mod ->
-                val status = if (mod.id in hidden) "[OCULTO]" else "[VISÍVEL]"
-                val prefix = "[${mod.commandPrefix}]"
-                sb.append(String.format("  %d. %-12s %-6s %-18s %s\n", index + 1, mod.id, prefix, mod.name, status))
+            if (visualMods.isEmpty()) {
+                sb.append("  (Nenhum módulo com card ativo na tela inicial)\n")
+            } else {
+                visualMods.forEachIndexed { index, mod ->
+                    val status = if (mod.id in hidden) "[OCULTO]" else "[VISÍVEL]"
+                    val prefix = "[${mod.commandPrefix}]"
+                    sb.append(String.format("  %d. %-12s %-6s %-18s %s\n", index + 1, mod.id, prefix, mod.name, status))
+                }
             }
-            sb.append("\nDica: use 'mod up <id>' ou 'mod edit' para mover.")
+            sb.append("\nDica: use 'mod up <id/num>', 'mod down <id/num>' ou 'mod edit' para mover.")
             return CommandResult.Success(sb.toString())
         }
 
@@ -72,8 +70,9 @@ class ModuleManagementModule(
         }
 
         val targetQuery = tokens[1]
-        val targetMod = sorted.getOrNull(targetQuery.toIntOrNull()?.minus(1) ?: -1)
-            ?: sorted.find { it.id.equals(targetQuery, ignoreCase = true) || it.name.contains(targetQuery, ignoreCase = true) }
+        val targetMod = visualMods.getOrNull(targetQuery.toIntOrNull()?.minus(1) ?: -1)
+            ?: visualMods.find { it.id.equals(targetQuery, ignoreCase = true) || it.name.contains(targetQuery, ignoreCase = true) }
+            ?: allModules.find { it.id.equals(targetQuery, ignoreCase = true) || it.name.contains(targetQuery, ignoreCase = true) }
 
         if (targetMod == null) {
             return CommandResult.Error("Módulo '$targetQuery' não encontrado. Digite 'mod list'.")
@@ -84,14 +83,14 @@ class ModuleManagementModule(
                 if (moduleRegistry.moveUp(targetMod.id)) {
                     CommandResult.Success("Módulo '${targetMod.name}' movido para cima.")
                 } else {
-                    CommandResult.Error("O módulo já está no topo.")
+                    CommandResult.Error("O módulo '${targetMod.name}' já está no topo.")
                 }
             }
             "down", "descer" -> {
                 if (moduleRegistry.moveDown(targetMod.id)) {
                     CommandResult.Success("Módulo '${targetMod.name}' movido para baixo.")
                 } else {
-                    CommandResult.Error("O módulo já está no final.")
+                    CommandResult.Error("O módulo '${targetMod.name}' já está no final.")
                 }
             }
             "move", "mover" -> {
@@ -99,8 +98,11 @@ class ModuleManagementModule(
                 if (pos == null || pos < 1) {
                     CommandResult.Error("Especifique a posição destino. Ex: 'mod move ${targetMod.id} 1'")
                 } else {
-                    moduleRegistry.moveToPosition(targetMod.id, pos)
-                    CommandResult.Success("Módulo '${targetMod.name}' movido para a posição $pos.")
+                    if (moduleRegistry.moveToPosition(targetMod.id, pos)) {
+                        CommandResult.Success("Módulo '${targetMod.name}' movido para a posição $pos.")
+                    } else {
+                        CommandResult.Error("Não foi possível mover o módulo '${targetMod.name}'.")
+                    }
                 }
             }
             "hide", "ocultar" -> {

@@ -44,7 +44,7 @@ class ModuleRegistry(
         _moduleOrder,
         _hiddenModules
     ) { moduleList, order, hidden ->
-        val visible = moduleList.filterNot { it.id in hidden }
+        val visible = moduleList.filter { (it.hasUi || it.blockFlow.value != null) && it.id !in hidden }
         visible.sortedBy { mod ->
             val idx = order.indexOf(mod.id)
             if (idx == -1) 999 else idx
@@ -67,12 +67,14 @@ class ModuleRegistry(
         current.add(module)
         _modules.value = current
 
-        // Se o módulo não estiver na lista de ordem, adiciona no final
-        if (!_moduleOrder.value.contains(module.id)) {
+        // Apenas inclui na lista de ordem da Home se for um módulo com UI visual
+        if (module.hasUi || module.blockFlow.value != null) {
             val updatedOrder = _moduleOrder.value.toMutableList()
-            updatedOrder.add(module.id)
-            _moduleOrder.value = updatedOrder
-            saveOrder(updatedOrder)
+            if (!updatedOrder.contains(module.id)) {
+                updatedOrder.add(module.id)
+                _moduleOrder.value = updatedOrder
+                saveOrder(updatedOrder)
+            }
         }
     }
 
@@ -85,44 +87,63 @@ class ModuleRegistry(
         return isEditMode.value
     }
 
+    /**
+     * Retorna a lista de módulos com interface visual (cards no feed),
+     * ordenados pela ordem definida pelo usuário.
+     */
+    fun getVisualModules(): List<EngineModule> {
+        val order = _moduleOrder.value
+        return _modules.value
+            .filter { it.hasUi || it.blockFlow.value != null }
+            .sortedBy { mod ->
+                val idx = order.indexOf(mod.id)
+                if (idx == -1) 999 else idx
+            }
+    }
+
     fun moveUp(moduleId: String): Boolean {
-        val current = _moduleOrder.value.toMutableList()
-        val index = current.indexOf(moduleId)
-        if (index > 0) {
-            val temp = current[index]
-            current[index] = current[index - 1]
-            current[index - 1] = temp
-            _moduleOrder.value = current
-            saveOrder(current)
+        val visualMods = getVisualModules()
+        val visualIds = visualMods.map { it.id }.toMutableList()
+        val currentIndex = visualIds.indexOf(moduleId)
+        if (currentIndex > 0) {
+            val temp = visualIds[currentIndex]
+            visualIds[currentIndex] = visualIds[currentIndex - 1]
+            visualIds[currentIndex - 1] = temp
+            _moduleOrder.value = visualIds
+            saveOrder(visualIds)
             return true
         }
         return false
     }
 
     fun moveDown(moduleId: String): Boolean {
-        val current = _moduleOrder.value.toMutableList()
-        val index = current.indexOf(moduleId)
-        if (index in 0 until current.size - 1) {
-            val temp = current[index]
-            current[index] = current[index + 1]
-            current[index + 1] = temp
-            _moduleOrder.value = current
-            saveOrder(current)
+        val visualMods = getVisualModules()
+        val visualIds = visualMods.map { it.id }.toMutableList()
+        val currentIndex = visualIds.indexOf(moduleId)
+        if (currentIndex in 0 until visualIds.size - 1) {
+            val temp = visualIds[currentIndex]
+            visualIds[currentIndex] = visualIds[currentIndex + 1]
+            visualIds[currentIndex + 1] = temp
+            _moduleOrder.value = visualIds
+            saveOrder(visualIds)
             return true
         }
         return false
     }
 
     fun moveToPosition(moduleId: String, position: Int): Boolean {
-        val current = _moduleOrder.value.toMutableList()
-        val index = current.indexOf(moduleId)
-        val targetIndex = (position - 1).coerceIn(0, current.size - 1)
-        if (index != -1 && index != targetIndex) {
-            val item = current.removeAt(index)
-            current.add(targetIndex, item)
-            _moduleOrder.value = current
-            saveOrder(current)
-            return true
+        val visualMods = getVisualModules()
+        val visualIds = visualMods.map { it.id }.toMutableList()
+        val currentIndex = visualIds.indexOf(moduleId)
+        if (currentIndex != -1) {
+            val targetIndex = (position - 1).coerceIn(0, visualIds.size - 1)
+            if (currentIndex != targetIndex) {
+                val item = visualIds.removeAt(currentIndex)
+                visualIds.add(targetIndex, item)
+                _moduleOrder.value = visualIds
+                saveOrder(visualIds)
+                return true
+            }
         }
         return false
     }

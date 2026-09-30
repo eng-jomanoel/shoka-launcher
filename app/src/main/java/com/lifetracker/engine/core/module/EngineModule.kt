@@ -35,8 +35,16 @@ interface EngineModule {
     val blockFlow: StateFlow<BlockUiModel?>
 
     /**
+     * Indica se o módulo possui interface visual (cards/blocos na Home).
+     * Módulos de sistema puramente CLI (ex: theme, apps, sys, mod) retornam false.
+     */
+    val hasUi: Boolean
+        get() = false
+
+    /**
      * Processa a string de argumentos enviada pelo Terminal CLI.
      * Exemplo: se o usuário digitar "a 500", [args] conterá "500".
      */
     suspend fun executeCommand(args: String): CommandResult
 }
+
