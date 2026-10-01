@@ -1445,6 +1445,21 @@ private fun AgendaCard(
                     )
                 }
             }
+
+            // Opção Hoje no topo direito
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(EngineTheme.colors.cardBorder.copy(alpha = 0.5f))
+                    .clickable { onActionClick("a today") }
+                    .padding(horizontal = 10.dp, vertical = 5.dp)
+            ) {
+                Text(
+                    text = "Hoje",
+                    style = EngineTypography.labelSmall,
+                    color = EngineTheme.colors.accentCyan
+                )
+            }
         }
 
         if (block.isOpen) {
