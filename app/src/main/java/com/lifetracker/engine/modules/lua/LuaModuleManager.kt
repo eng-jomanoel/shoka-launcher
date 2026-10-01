@@ -50,12 +50,12 @@ class LuaModuleManager(
             baseDir = rootDir,
             onOpenApp = onOpenApp,
             onMusicComplete = {
-                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
                     moduleRegistry.dispatch("p next")
                 }
             },
             onMusicStateChanged = {
-                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default).launch {
                     activeLuaModules.forEach { mod ->
                         mod.updateUi()
                     }

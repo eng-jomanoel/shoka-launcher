@@ -86,33 +86,40 @@ fun HomeScreen(
     val activeBlocks by moduleRegistry.activeBlocksFlow.collectAsState()
     val isEditMode by moduleRegistry.isEditMode.collectAsState()
 
-    val executeCommand: (String) -> Unit = { command ->
-        coroutineScope.launch {
-            clearResultJob?.cancel()
-            val trimmed = command.trim()
-            if (trimmed.equals("clear", ignoreCase = true) || trimmed.equals("cls", ignoreCase = true)) {
-                lastCommandResult = null
-                currentInput = ""
-            } else {
-                val result = moduleRegistry.dispatch(command)
-                lastCommandResult = result
-                currentInput = ""
-                // Faz a mensagem de retorno sumir automaticamente respeitando o tamanho do texto
-                if (result !is CommandResult.Ignored) {
-                    val delayMs = when {
-                        result is CommandResult.Error -> 8000L
-                        result is CommandResult.Success && (result.message.contains("\n") || result.message.length > 80) -> 12000L
-                        trimmed.equals("help", ignoreCase = true) -> 12000L
-                        else -> 4500L
-                    }
-                    clearResultJob = coroutineScope.launch {
-                        kotlinx.coroutines.delay(delayMs)
-                        lastCommandResult = null
+    val executeCommand: (String) -> Unit = remember(moduleRegistry, coroutineScope) {
+        { command ->
+            coroutineScope.launch {
+                clearResultJob?.cancel()
+                val trimmed = command.trim()
+                if (trimmed.equals("clear", ignoreCase = true) || trimmed.equals("cls", ignoreCase = true)) {
+                    lastCommandResult = null
+                    currentInput = ""
+                } else {
+                    val result = moduleRegistry.dispatch(command)
+                    lastCommandResult = result
+                    currentInput = ""
+                    // Faz a mensagem de retorno sumir automaticamente respeitando o tamanho do texto
+                    if (result !is CommandResult.Ignored) {
+                        val delayMs = when {
+                            result is CommandResult.Error -> 8000L
+                            result is CommandResult.Success && (result.message.contains("\n") || result.message.length > 80) -> 12000L
+                            trimmed.equals("help", ignoreCase = true) -> 12000L
+                            else -> 4500L
+                        }
+                        clearResultJob = coroutineScope.launch {
+                            kotlinx.coroutines.delay(delayMs)
+                            lastCommandResult = null
+                        }
                     }
                 }
             }
         }
     }
+
+    val onMoveUp: (String) -> Unit = remember(moduleRegistry) { { moduleRegistry.moveUp(it) } }
+    val onMoveDown: (String) -> Unit = remember(moduleRegistry) { { moduleRegistry.moveDown(it) } }
+    val onHide: (String) -> Unit = remember(moduleRegistry) { { moduleRegistry.hideModule(it) } }
+    val onExitEditMode: () -> Unit = remember(moduleRegistry) { { moduleRegistry.toggleEditMode() } }
 
     Column(
         modifier = modifier
@@ -127,10 +134,10 @@ fun HomeScreen(
             blocks = activeBlocks,
             onActionClick = executeCommand,
             isEditMode = isEditMode,
-            onMoveUp = { moduleRegistry.moveUp(it) },
-            onMoveDown = { moduleRegistry.moveDown(it) },
-            onHide = { moduleRegistry.hideModule(it) },
-            onExitEditMode = { moduleRegistry.toggleEditMode() },
+            onMoveUp = onMoveUp,
+            onMoveDown = onMoveDown,
+            onHide = onHide,
+            onExitEditMode = onExitEditMode,
             modifier = Modifier.weight(1f)
         )
 

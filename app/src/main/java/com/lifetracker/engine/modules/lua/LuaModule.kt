@@ -201,7 +201,7 @@ class LuaModule(
                           (block is BlockUiModel.Workout && block.isTimerActive)
         if (needsTicker) {
             if (tickerJob == null || tickerJob?.isActive != true) {
-                tickerJob = CoroutineScope(Dispatchers.Main).launch {
+                tickerJob = CoroutineScope(Dispatchers.Default).launch {
                     while (isActive) {
                         delay(1000)
                         updateUi()

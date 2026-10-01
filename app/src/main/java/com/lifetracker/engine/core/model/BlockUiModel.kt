@@ -1,11 +1,13 @@
 package com.lifetracker.engine.core.model
 
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
 
 /**
  * Representa os tipos de Blocos visuais que qualquer Módulo pode emitir
  * para ser desenhado no Feed Dinâmico da tela inicial.
  */
+@Immutable
 sealed interface BlockUiModel {
     val moduleId: String
     val title: String
@@ -13,6 +15,7 @@ sealed interface BlockUiModel {
     /**
      * Bloco de Informação/Texto simples
      */
+    @Immutable
     data class Info(
         override val moduleId: String,
         override val title: String,
@@ -24,6 +27,7 @@ sealed interface BlockUiModel {
     /**
      * Bloco de Progresso com Barra (ex: Água, Calorias, Passos)
      */
+    @Immutable
     data class Progress(
         override val moduleId: String,
         override val title: String,
@@ -39,6 +43,7 @@ sealed interface BlockUiModel {
     /**
      * Bloco Interativo com botões rápidos de ação
      */
+    @Immutable
     data class Interactive(
         override val moduleId: String,
         override val title: String,
@@ -50,6 +55,7 @@ sealed interface BlockUiModel {
      * Bloco de Mídia Rico com suporte a foto de capa da playlist,
      * controles de reprodução (Play, Pause, Skip, Back) e lista clicável.
      */
+    @Immutable
     data class Media(
         override val moduleId: String,
         override val title: String,
@@ -68,6 +74,7 @@ sealed interface BlockUiModel {
      * Bloco de Treino / Academia com suporte a séries, repetições,
      * carga, cronômetro de descanso sincronizado e lista de exercícios.
      */
+    @Immutable
     data class Workout(
         override val moduleId: String,
         override val title: String,
@@ -97,6 +104,7 @@ sealed interface BlockUiModel {
     /**
      * Bloco de Anotações e Tarefas / Checklist
      */
+    @Immutable
     data class Notes(
         override val moduleId: String,
         override val title: String,
@@ -109,6 +117,7 @@ sealed interface BlockUiModel {
         val inputCommand: String? = null
     ) : BlockUiModel
 
+    @Immutable
     data class NoteItem(
         val id: Int,
         val text: String,
@@ -121,6 +130,7 @@ sealed interface BlockUiModel {
     /**
      * Bloco de Calendário/Agenda
      */
+    @Immutable
     data class Agenda(
         override val moduleId: String,
         override val title: String,
@@ -135,6 +145,7 @@ sealed interface BlockUiModel {
         val inputCommand: String? = null
     ) : BlockUiModel
 
+    @Immutable
     data class CalendarDay(
         val dayNumber: Int,
         val isToday: Boolean = false,
@@ -146,6 +157,7 @@ sealed interface BlockUiModel {
         val commandToExecute: String? = null
     )
 
+    @Immutable
     data class AgendaEvent(
         val id: String,
         val title: String,
@@ -157,11 +169,13 @@ sealed interface BlockUiModel {
         val deleteCommand: String? = null
     )
 
+    @Immutable
     data class BlockAction(
         val label: String,
         val commandToExecute: String
     )
 
+    @Immutable
     data class MediaItem(
         val label: String,
         val sublabel: String? = null,
@@ -169,6 +183,7 @@ sealed interface BlockUiModel {
         val isActive: Boolean = false
     )
 
+    @Immutable
     data class WorkoutExerciseItem(
         val index: Int,
         val name: String,
@@ -178,6 +193,7 @@ sealed interface BlockUiModel {
         val commandToExecute: String
     )
 
+    @Immutable
     data class WorkoutDayItem(
         val dayId: String,
         val label: String,
@@ -186,6 +202,7 @@ sealed interface BlockUiModel {
         val commandToExecute: String
     )
 
+    @Immutable
     data class WorkoutFileItem(
         val name: String,
         val isActive: Boolean,
@@ -196,6 +213,7 @@ sealed interface BlockUiModel {
      * Bloco de Dieta e Nutrição com acompanhamento de macros, calorias,
      * ingestão de água, refeições do dia e itens detalhados.
      */
+    @Immutable
     data class Diet(
         override val moduleId: String,
         override val title: String,
@@ -235,11 +253,13 @@ sealed interface BlockUiModel {
         val actions: List<BlockAction> = emptyList()
     ) : BlockUiModel
 
+    @Immutable
     data class DietFoodItem(
         val name: String,
         val amount: String = ""
     )
 
+    @Immutable
     data class DietMealItem(
         val id: String,
         val name: String,
@@ -250,6 +270,7 @@ sealed interface BlockUiModel {
         val commandToExecute: String = ""
     )
 
+    @Immutable
     data class DietDayItem(
         val dayId: String,
         val label: String,

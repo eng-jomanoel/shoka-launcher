@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -128,7 +129,11 @@ fun FeedZone(
             }
         }
 
-        itemsIndexed(blocks, key = { _, it -> it.moduleId }) { index, block ->
+        itemsIndexed(
+            items = blocks,
+            key = { _, it -> it.moduleId },
+            contentType = { _, it -> it::class.java.simpleName }
+        ) { index, block ->
             val canMoveUp = index > 0
             val canMoveDown = index < blocks.size - 1
 
@@ -1360,16 +1365,24 @@ private fun DietCard(
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // Barra de Progresso de Calorias
-            LinearProgressIndicator(
-                progress = { calorieProgress },
+            // Barra de Progresso de Calorias (leve, sem alocação ou animação contínua)
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp)),
-                color = EngineTheme.colors.accentGreen,
-                trackColor = EngineTheme.colors.cardBorder
-            )
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(EngineTheme.colors.cardBorder)
+            ) {
+                if (calorieProgress > 0f) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(fraction = calorieProgress)
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(EngineTheme.colors.accentGreen)
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(8.dp))
 
@@ -1862,39 +1875,47 @@ private fun AgendaCard(
     block: BlockUiModel.Agenda,
     onActionClick: (String) -> Unit
 ) {
-    val lazyListState = rememberLazyListState()
-    val coroutineScope = rememberCoroutineScope()
+    val configuration = LocalConfiguration.current
     val density = LocalDensity.current
+    val coroutineScope = rememberCoroutineScope()
+
+    val cardContentWidthDp = configuration.screenWidthDp.dp - 56.dp
+    val halfWidthPx = with(density) { (cardContentWidthDp / 2).roundToPx() }
+    val itemWidthPx = with(density) { 50.dp.roundToPx() }
+    val centerOffsetPx = -(halfWidthPx - itemWidthPx / 2)
+
+    val targetIndex = remember(block.days) {
+        val selIdx = block.days.indexOfFirst { it.isSelected }
+        if (selIdx >= 0) selIdx else block.days.indexOfFirst { it.isToday }
+    }
+
+    val lazyListState = rememberLazyListState(
+        initialFirstVisibleItemIndex = if (targetIndex >= 0) targetIndex else 0,
+        initialFirstVisibleItemScrollOffset = if (targetIndex >= 0) centerOffsetPx else 0
+    )
+
+    fun centerDay(index: Int) {
+        if (index in block.days.indices) {
+            coroutineScope.launch {
+                lazyListState.animateScrollToItem(index, centerOffsetPx)
+            }
+        }
+    }
+
+    // Auto-centralização suave apenas quando o dia selecionado mudar pelo usuário
+    val selectedKey = remember(block.days) {
+        block.days.firstOrNull { it.isSelected }?.fullDateStr
+    }
+    var lastScrolledKey by remember { mutableStateOf(selectedKey) }
+    LaunchedEffect(selectedKey) {
+        if (selectedKey != null && selectedKey != lastScrolledKey && targetIndex >= 0) {
+            lastScrolledKey = selectedKey
+            lazyListState.animateScrollToItem(targetIndex, centerOffsetPx)
+        }
+    }
 
     CardContainer {
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-            val halfWidthPx = with(density) { (maxWidth / 2).roundToPx() }
-            val itemWidthPx = with(density) { 50.dp.roundToPx() }
-            val centerOffsetPx = -(halfWidthPx - itemWidthPx / 2)
-
-            fun centerDay(index: Int) {
-                if (index in block.days.indices) {
-                    coroutineScope.launch {
-                        lazyListState.animateScrollToItem(index, centerOffsetPx)
-                    }
-                }
-            }
-
-            // Auto-centralização suave ao mudar de dia ou carregar
-            val selectedKey = remember(block.days) {
-                block.days.firstOrNull { it.isSelected }?.fullDateStr
-                    ?: block.days.firstOrNull { it.isToday }?.fullDateStr
-            }
-            LaunchedEffect(selectedKey, block.days.size) {
-                val targetIndex = block.days.indexOfFirst { it.isSelected }.let {
-                    if (it >= 0) it else block.days.indexOfFirst { d -> d.isToday }
-                }
-                if (targetIndex >= 0) {
-                    lazyListState.animateScrollToItem(targetIndex, centerOffsetPx)
-                }
-            }
-
-            Column(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxWidth()) {
                 // ── Header ──
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -2292,6 +2313,5 @@ private fun AgendaCard(
             }
         }
     }
-}
 }
 }
