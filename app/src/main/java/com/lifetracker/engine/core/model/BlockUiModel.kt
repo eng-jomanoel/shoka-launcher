@@ -103,7 +103,9 @@ sealed interface BlockUiModel {
         val subtitle: String? = null,
         val isOpen: Boolean = true,
         val items: List<NoteItem> = emptyList(),
-        val actions: List<BlockAction> = emptyList()
+        val actions: List<BlockAction> = emptyList(),
+        val inputHint: String? = null,
+        val inputCommand: String? = null
     ) : BlockUiModel
 
     data class NoteItem(

@@ -22,9 +22,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -1310,88 +1314,107 @@ private fun NotesCard(
             }
         }
 
-        if (block.isOpen && block.items.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
+        if (block.isOpen) {
+            if (block.items.isEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(EngineTheme.colors.cardBorder.copy(alpha = 0.25f))
+                        .padding(vertical = 16.dp, horizontal = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "Nenhuma anotação no momento.",
+                        style = EngineTypography.bodyMedium,
+                        color = EngineTheme.colors.textMuted,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                Spacer(modifier = Modifier.height(8.dp))
 
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 300.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                block.items.forEach { item ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(4.dp))
-                            .then(
-                                if (item.isChecklist && item.toggleCommand != null) {
-                                    Modifier.clickable { onActionClick(item.toggleCommand) }
-                                } else Modifier
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 300.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    block.items.forEach { item ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(4.dp))
+                                .then(
+                                    if (item.isChecklist && item.toggleCommand != null) {
+                                        Modifier.clickable { onActionClick(item.toggleCommand) }
+                                    } else Modifier
+                                )
+                                .padding(vertical = 4.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (item.isChecklist) {
+                                // Checkbox visual
+                                val boxColor = if (item.isChecked) EngineTheme.colors.accentGreen
+                                    else EngineTheme.colors.cardBorder
+                                Box(
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .clip(RoundedCornerShape(3.dp))
+                                        .border(1.5f.dp, boxColor, RoundedCornerShape(3.dp))
+                                        .background(
+                                            if (item.isChecked) EngineTheme.colors.accentGreen.copy(alpha = 0.15f)
+                                            else Color.Transparent
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    if (item.isChecked) {
+                                        Text(
+                                            text = "✓",
+                                            style = EngineTypography.labelSmall,
+                                            color = EngineTheme.colors.accentGreen
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                            } else {
+                                // Bullet simples
+                                Text(
+                                    text = "•",
+                                    style = EngineTypography.bodyMedium,
+                                    color = EngineTheme.colors.accentCyan,
+                                    modifier = Modifier.padding(end = 8.dp)
+                                )
+                            }
+
+                            // Texto do item
+                            Text(
+                                text = item.text,
+                                style = EngineTypography.bodyMedium,
+                                color = if (item.isChecked) EngineTheme.colors.textMuted
+                                    else EngineTheme.colors.textPrimary,
+                                textDecoration = if (item.isChecked) TextDecoration.LineThrough
+                                    else TextDecoration.None,
+                                modifier = Modifier.weight(1f)
                             )
-                            .padding(vertical = 4.dp, horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (item.isChecklist) {
-                            // Checkbox visual
-                            val boxColor = if (item.isChecked) EngineTheme.colors.accentGreen
-                                else EngineTheme.colors.cardBorder
-                            Box(
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .clip(RoundedCornerShape(3.dp))
-                                    .border(1.5f.dp, boxColor, RoundedCornerShape(3.dp))
-                                    .background(
-                                        if (item.isChecked) EngineTheme.colors.accentGreen.copy(alpha = 0.15f)
-                                        else Color.Transparent
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (item.isChecked) {
+
+                            // Botão de deletar com área de toque adequada
+                            if (item.deleteCommand != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .clickable { onActionClick(item.deleteCommand) },
+                                    contentAlignment = Alignment.Center
+                                ) {
                                     Text(
-                                        text = "✓",
+                                        text = "✕",
                                         style = EngineTypography.labelSmall,
-                                        color = EngineTheme.colors.accentGreen
+                                        color = EngineTheme.colors.accentRed.copy(alpha = 0.7f)
                                     )
                                 }
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                        } else {
-                            // Bullet simples
-                            Text(
-                                text = "•",
-                                style = EngineTypography.bodyMedium,
-                                color = EngineTheme.colors.accentCyan,
-                                modifier = Modifier.padding(end = 8.dp)
-                            )
-                        }
-
-                        // Texto do item
-                        Text(
-                            text = item.text,
-                            style = EngineTypography.bodyMedium,
-                            color = if (item.isChecked) EngineTheme.colors.textMuted
-                                else EngineTheme.colors.textPrimary,
-                            textDecoration = if (item.isChecked) TextDecoration.LineThrough
-                                else TextDecoration.None,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        // Botão de deletar com área de toque adequada
-                        if (item.deleteCommand != null) {
-                            Box(
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .clickable { onActionClick(item.deleteCommand) },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "✕",
-                                    style = EngineTypography.labelSmall,
-                                    color = EngineTheme.colors.accentRed.copy(alpha = 0.7f)
-                                )
                             }
                         }
                     }
@@ -1420,6 +1443,62 @@ private fun NotesCard(
                 }
             }
         }
+
+        // ── Input Field ──
+        if (block.inputHint != null && block.inputCommand != null) {
+            Spacer(modifier = Modifier.height(10.dp))
+            var textState by remember { mutableStateOf(TextFieldValue("")) }
+            val focusManager = LocalFocusManager.current
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(EngineTheme.colors.background, RoundedCornerShape(4.dp))
+                    .border(1.dp, EngineTheme.colors.cardBorder, RoundedCornerShape(4.dp))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BasicTextField(
+                    value = textState,
+                    onValueChange = { textState = it },
+                    textStyle = EngineTypography.bodyMedium.copy(color = EngineTheme.colors.textPrimary),
+                    modifier = Modifier.weight(1f),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(
+                        onSend = {
+                            if (textState.text.isNotBlank()) {
+                                onActionClick("${block.inputCommand} ${textState.text}")
+                                textState = TextFieldValue("")
+                                focusManager.clearFocus()
+                            }
+                        }
+                    ),
+                    decorationBox = { innerTextField ->
+                        if (textState.text.isEmpty()) {
+                            Text(
+                                text = block.inputHint,
+                                style = EngineTypography.bodyMedium,
+                                color = EngineTheme.colors.textMuted
+                            )
+                        }
+                        innerTextField()
+                    }
+                )
+                if (textState.text.isNotBlank()) {
+                    Text(
+                        text = "Salvar",
+                        style = EngineTypography.labelMedium,
+                        color = EngineTheme.colors.accentGreen,
+                        modifier = Modifier
+                            .clickable {
+                                onActionClick("${block.inputCommand} ${textState.text}")
+                                textState = TextFieldValue("")
+                                focusManager.clearFocus()
+                            }
+                            .padding(start = 8.dp)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -1428,141 +1507,169 @@ private fun AgendaCard(
     block: BlockUiModel.Agenda,
     onActionClick: (String) -> Unit
 ) {
+    val lazyListState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+    val density = LocalDensity.current
+
     CardContainer {
-        // ── Header ──
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = block.title, style = EngineTypography.titleMedium)
-                if (!block.subtitle.isNullOrEmpty()) {
-                    Text(
-                        text = block.subtitle,
-                        style = EngineTypography.labelSmall,
-                        color = EngineTheme.colors.textSecondary
-                    )
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val halfWidthPx = with(density) { (maxWidth / 2).roundToPx() }
+            val itemWidthPx = with(density) { 50.dp.roundToPx() }
+            val centerOffsetPx = -(halfWidthPx - itemWidthPx / 2)
+
+            fun centerDay(index: Int) {
+                if (index in block.days.indices) {
+                    coroutineScope.launch {
+                        lazyListState.animateScrollToItem(index, centerOffsetPx)
+                    }
                 }
             }
 
-            // Opção Hoje no topo direito
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(EngineTheme.colors.cardBorder.copy(alpha = 0.5f))
-                    .clickable { onActionClick("a today") }
-                    .padding(horizontal = 10.dp, vertical = 5.dp)
-            ) {
-                Text(
-                    text = "Hoje",
-                    style = EngineTypography.labelSmall,
-                    color = EngineTheme.colors.accentCyan
-                )
+            // Auto-centralização suave ao mudar de dia ou carregar
+            val selectedKey = remember(block.days) {
+                block.days.firstOrNull { it.isSelected }?.fullDateStr
+                    ?: block.days.firstOrNull { it.isToday }?.fullDateStr
             }
-        }
+            LaunchedEffect(selectedKey, block.days.size) {
+                val targetIndex = block.days.indexOfFirst { it.isSelected }.let {
+                    if (it >= 0) it else block.days.indexOfFirst { d -> d.isToday }
+                }
+                if (targetIndex >= 0) {
+                    lazyListState.animateScrollToItem(targetIndex, centerOffsetPx)
+                }
+            }
 
-        if (block.isOpen) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 480.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Secao Calendario (Carrossel Horizontal de Dias da Semana)
-                if (block.days.isNotEmpty()) {
-                    val lazyListState = rememberLazyListState()
-                    val targetIndex = remember(block.days) {
-                        val sel = block.days.indexOfFirst { it.isSelected }
-                        if (sel >= 0) sel else block.days.indexOfFirst { it.isToday }
-                    }
-                    LaunchedEffect(targetIndex) {
-                        if (targetIndex >= 0) {
-                            lazyListState.animateScrollToItem(maxOf(0, targetIndex - 2))
-                        }
-                    }
-
-                    Column(
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        if (block.monthLabel.isNotBlank()) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // ── Header ──
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = block.title, style = EngineTypography.titleMedium)
+                        if (!block.subtitle.isNullOrEmpty()) {
                             Text(
-                                text = block.monthLabel,
-                                style = EngineTypography.labelMedium,
-                                color = EngineTheme.colors.accentCyan,
-                                modifier = Modifier.padding(bottom = 6.dp)
+                                text = block.subtitle,
+                                style = EngineTypography.labelSmall,
+                                color = EngineTheme.colors.textSecondary
                             )
                         }
+                    }
 
-                        LazyRow(
-                            state = lazyListState,
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            contentPadding = PaddingValues(horizontal = 2.dp)
-                        ) {
-                            items(block.days) { day ->
-                                val isToday = day.isToday
-                                val isSelected = day.isSelected
-                                val bg = when {
-                                    isSelected -> EngineTheme.colors.accentCyan.copy(alpha = 0.18f)
-                                    isToday -> EngineTheme.colors.cardBorder.copy(alpha = 0.6f)
-                                    else -> EngineTheme.colors.background
+                    // Opção Hoje no topo direito (reseta o scroll e centraliza o dia de hoje)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(EngineTheme.colors.cardBorder.copy(alpha = 0.5f))
+                            .clickable {
+                                val todayIdx = block.days.indexOfFirst { it.isToday }
+                                if (todayIdx >= 0) {
+                                    centerDay(todayIdx)
                                 }
-                                val borderCol = when {
-                                    isSelected -> EngineTheme.colors.accentCyan
-                                    isToday -> EngineTheme.colors.textMuted
-                                    else -> EngineTheme.colors.cardBorder
+                                onActionClick("a today")
+                            }
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    ) {
+                        Text(
+                            text = "Hoje",
+                            style = EngineTypography.labelSmall,
+                            color = EngineTheme.colors.accentCyan
+                        )
+                    }
+                }
+
+                if (block.isOpen) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 480.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Secao Calendario (Carrossel Horizontal de Dias da Semana)
+                        if (block.days.isNotEmpty()) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                if (block.monthLabel.isNotBlank()) {
+                                    Text(
+                                        text = block.monthLabel,
+                                        style = EngineTypography.labelMedium,
+                                        color = EngineTheme.colors.accentCyan,
+                                        modifier = Modifier.padding(bottom = 6.dp)
+                                    )
                                 }
 
-                                Column(
-                                    modifier = Modifier
-                                        .width(50.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(bg)
-                                        .border(1.dp, borderCol, RoundedCornerShape(8.dp))
-                                        .clickable {
-                                            if (day.commandToExecute != null) onActionClick(day.commandToExecute)
-                                        }
-                                        .padding(vertical = 8.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
+                                LazyRow(
+                                    state = lazyListState,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 2.dp)
                                 ) {
-                                    Text(
-                                        text = day.dayOfWeekLabel.ifEmpty { "D" },
-                                        style = EngineTypography.labelSmall,
-                                        color = if (isSelected) EngineTheme.colors.accentCyan else EngineTheme.colors.textSecondary
-                                    )
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Text(
-                                        text = if (day.dayNumber > 0) String.format("%02d", day.dayNumber) else "--",
-                                        style = EngineTypography.titleMedium,
-                                        color = if (isSelected) EngineTheme.colors.accentCyan else if (isToday) EngineTheme.colors.accentCyan else EngineTheme.colors.textPrimary
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Row(
-                                        modifier = Modifier.height(6.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(3.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        if (day.hasEvents) {
-                                            Box(modifier = Modifier.size(5.dp).clip(CircleShape).background(EngineTheme.colors.accentAmber))
+                                    itemsIndexed(block.days) { index, day ->
+                                        val isToday = day.isToday
+                                        val isSelected = day.isSelected
+                                        val bg = when {
+                                            isSelected -> EngineTheme.colors.accentCyan.copy(alpha = 0.18f)
+                                            isToday -> EngineTheme.colors.cardBorder.copy(alpha = 0.6f)
+                                            else -> EngineTheme.colors.background
                                         }
-                                        if (day.hasTasks) {
-                                            Box(modifier = Modifier.size(5.dp).clip(CircleShape).background(EngineTheme.colors.accentGreen))
+                                        val borderCol = when {
+                                            isSelected -> EngineTheme.colors.accentCyan
+                                            isToday -> EngineTheme.colors.textMuted
+                                            else -> EngineTheme.colors.cardBorder
                                         }
-                                        if (!day.hasEvents && !day.hasTasks) {
-                                            Spacer(modifier = Modifier.size(5.dp))
+
+                                        Column(
+                                            modifier = Modifier
+                                                .width(50.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(bg)
+                                                .border(1.dp, borderCol, RoundedCornerShape(8.dp))
+                                                .clickable {
+                                                    centerDay(index)
+                                                    if (day.commandToExecute != null) onActionClick(day.commandToExecute)
+                                                }
+                                                .padding(vertical = 8.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Text(
+                                                text = day.dayOfWeekLabel.ifEmpty { "D" },
+                                                style = EngineTypography.labelSmall,
+                                                color = if (isSelected) EngineTheme.colors.accentCyan else EngineTheme.colors.textSecondary
+                                            )
+                                            Spacer(modifier = Modifier.height(2.dp))
+                                            Text(
+                                                text = if (day.dayNumber > 0) String.format("%02d", day.dayNumber) else "--",
+                                                style = EngineTypography.titleMedium,
+                                                color = if (isSelected) EngineTheme.colors.accentCyan else if (isToday) EngineTheme.colors.accentCyan else EngineTheme.colors.textPrimary
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Row(
+                                                modifier = Modifier.height(6.dp),
+                                                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                if (day.hasEvents) {
+                                                    Box(modifier = Modifier.size(5.dp).clip(CircleShape).background(EngineTheme.colors.accentAmber))
+                                                }
+                                                if (day.hasTasks) {
+                                                    Box(modifier = Modifier.size(5.dp).clip(CircleShape).background(EngineTheme.colors.accentGreen))
+                                                }
+                                                if (!day.hasEvents && !day.hasTasks) {
+                                                    Spacer(modifier = Modifier.size(5.dp))
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
-                    }
 
-                    // Divisoria
-                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(EngineTheme.colors.cardBorder))
-                }
+                            // Divisoria
+                            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(EngineTheme.colors.cardBorder))
+                        }
 
                 // Secao de Eventos
                 if (block.events.isNotEmpty()) {
@@ -1830,4 +1937,6 @@ private fun AgendaCard(
             }
         }
     }
+}
+}
 }

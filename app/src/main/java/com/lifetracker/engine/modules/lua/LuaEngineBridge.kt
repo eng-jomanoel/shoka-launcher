@@ -224,7 +224,7 @@ class LuaEngineBridge(
 
         // --- Engine.json ---
         val json = LuaTable()
-        json.set("parse", object : OneArgFunction() {
+        val parseFunc = object : OneArgFunction() {
             override fun call(arg: LuaValue): LuaValue {
                 val jsonStr = arg.checkjstring()
                 return try {
@@ -239,7 +239,9 @@ class LuaEngineBridge(
                     LuaValue.NIL
                 }
             }
-        })
+        }
+        json.set("parse", parseFunc)
+        json.set("decode", parseFunc)
         json.set("encode", object : OneArgFunction() {
             override fun call(arg: LuaValue): LuaValue {
                 return try {

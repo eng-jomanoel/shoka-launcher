@@ -372,7 +372,9 @@ class LuaModule(
                 subtitle = if (table.get("subtitle").isnil()) null else table.get("subtitle").tojstring(),
                 isOpen = table.get("is_open").optboolean(true),
                 items = items,
-                actions = actions
+                actions = actions,
+                inputHint = if (table.get("input_hint").isnil()) null else table.get("input_hint").tojstring(),
+                inputCommand = if (table.get("input_cmd").isnil()) null else table.get("input_cmd").tojstring()
             )
         }
 
