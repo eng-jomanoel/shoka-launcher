@@ -123,10 +123,21 @@ sealed interface BlockUiModel {
         override val title: String,
         val subtitle: String? = null,
         val isOpen: Boolean = true,
+        val monthLabel: String = "",
+        val days: List<CalendarDay> = emptyList(),
         val events: List<AgendaEvent> = emptyList(),
         val tasks: List<NoteItem> = emptyList(), // Reusa NoteItem para tarefas
         val actions: List<BlockAction> = emptyList()
     ) : BlockUiModel
+
+    data class CalendarDay(
+        val dayNumber: Int, // -1 para espacos vazios
+        val isToday: Boolean = false,
+        val isSelected: Boolean = false,
+        val hasEvents: Boolean = false,
+        val hasTasks: Boolean = false,
+        val commandToExecute: String? = null
+    )
 
     data class AgendaEvent(
         val id: String,

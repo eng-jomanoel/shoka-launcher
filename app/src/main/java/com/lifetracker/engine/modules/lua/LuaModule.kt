@@ -391,11 +391,32 @@ class LuaModule(
                 }
             }
 
+            val days = mutableListOf<BlockUiModel.CalendarDay>()
+            val daysVal = table.get("days")
+            if (!daysVal.isnil() && daysVal.istable()) {
+                val dTable = daysVal.checktable()
+                for (i in 1..dTable.length()) {
+                    val d = dTable.get(i)
+                    if (d.istable()) {
+                        days.add(BlockUiModel.CalendarDay(
+                            dayNumber = d.get("day").optint(-1),
+                            isToday = d.get("is_today").optboolean(false),
+                            isSelected = d.get("is_selected").optboolean(false),
+                            hasEvents = d.get("has_events").optboolean(false),
+                            hasTasks = d.get("has_tasks").optboolean(false),
+                            commandToExecute = if (d.get("cmd").isnil()) null else d.get("cmd").tojstring()
+                        ))
+                    }
+                }
+            }
+
             return BlockUiModel.Agenda(
                 moduleId = id,
                 title = blockTitle,
                 subtitle = if (table.get("subtitle").isnil()) null else table.get("subtitle").tojstring(),
                 isOpen = table.get("is_open").optboolean(true),
+                monthLabel = table.get("month_label").optjstring(""),
+                days = days,
                 events = events,
                 tasks = tasks,
                 actions = actions

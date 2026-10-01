@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -1385,6 +1386,100 @@ private fun AgendaCard(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // Secao Calendario (Grid)
+                if (block.days.isNotEmpty()) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        if (block.monthLabel.isNotBlank()) {
+                            Text(
+                                text = block.monthLabel,
+                                style = EngineTypography.labelMedium,
+                                color = EngineTheme.colors.accentCyan,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+                        
+                        // Header dos dias da semana (D, S, T, Q, Q, S, S)
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                            listOf("D", "S", "T", "Q", "Q", "S", "S").forEach { d ->
+                                Text(
+                                    text = d,
+                                    style = EngineTypography.labelSmall,
+                                    color = EngineTheme.colors.textMuted,
+                                    modifier = Modifier.weight(1f),
+                                    textAlign = TextAlign.Center
+                                )
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(4.dp))
+                        
+                        // Grid de dias
+                        val chunks = block.days.chunked(7)
+                        chunks.forEach { week ->
+                            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                week.forEach { day ->
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .aspectRatio(1f)
+                                            .padding(2.dp)
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(
+                                                when {
+                                                    day.isSelected -> EngineTheme.colors.accentCyan.copy(alpha = 0.2f)
+                                                    day.isToday -> EngineTheme.colors.cardBorder
+                                                    else -> Color.Transparent
+                                                }
+                                            )
+                                            .border(
+                                                width = 1.dp,
+                                                color = if (day.isToday) EngineTheme.colors.accentCyan else Color.Transparent,
+                                                shape = RoundedCornerShape(4.dp)
+                                            )
+                                            .then(
+                                                if (day.commandToExecute != null) Modifier.clickable { onActionClick(day.commandToExecute) }
+                                                else Modifier
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (day.dayNumber > 0) {
+                                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Text(
+                                                    text = day.dayNumber.toString(),
+                                                    style = EngineTypography.labelSmall,
+                                                    color = if (day.isSelected) EngineTheme.colors.accentCyan else EngineTheme.colors.textPrimary
+                                                )
+                                                
+                                                // Dots
+                                                if (day.hasEvents || day.hasTasks) {
+                                                    Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                                        if (day.hasEvents) {
+                                                            Box(modifier = Modifier.size(4.dp).clip(androidx.compose.foundation.shape.CircleShape).background(EngineTheme.colors.accentAmber))
+                                                        }
+                                                        if (day.hasTasks) {
+                                                            Box(modifier = Modifier.size(4.dp).clip(androidx.compose.foundation.shape.CircleShape).background(EngineTheme.colors.accentGreen))
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                // Preencher se faltar
+                                repeat(7 - week.size) {
+                                    Spacer(modifier = Modifier.weight(1f))
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Divisoria
+                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(EngineTheme.colors.cardBorder))
+                }
+
                 // Secao de Eventos
                 if (block.events.isNotEmpty()) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
