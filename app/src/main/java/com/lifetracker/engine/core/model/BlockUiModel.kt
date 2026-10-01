@@ -145,10 +145,11 @@ sealed interface BlockUiModel {
         val id: String,
         val title: String,
         val timeLabel: String,
-        val isAllDay: Boolean,
-        val location: String?,
-        val colorHex: String?,
-        val commandToExecute: String? = null
+        val isAllDay: Boolean = false,
+        val location: String? = null,
+        val colorHex: String? = null,
+        val commandToExecute: String? = null,
+        val deleteCommand: String? = null
     )
 
     data class BlockAction(

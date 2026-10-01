@@ -79,6 +79,11 @@ class LuaEngineBridge(
                 return LuaValue.valueOf(AudioPlayerManager.isActuallyPlaying())
             }
         })
+        audio.set("is_paused", object : ZeroArgFunction() {
+            override fun call(): LuaValue {
+                return LuaValue.valueOf(AudioPlayerManager.isPaused)
+            }
+        })
         audio.set("get_position", object : ZeroArgFunction() {
             override fun call(): LuaValue {
                 return LuaValue.valueOf(AudioPlayerManager.getPosition())
@@ -254,11 +259,19 @@ class LuaEngineBridge(
                 return LuaValue.valueOf(System.currentTimeMillis().toDouble())
             }
         })
-        time.set("date", object : OneArgFunction() {
-            override fun call(formatArg: LuaValue): LuaValue {
+        time.set("date", object : TwoArgFunction() {
+            override fun call(formatArg: LuaValue, timeArg: LuaValue): LuaValue {
                 val pattern = if (formatArg.isnil()) "yyyy-MM-dd HH:mm:ss" else formatArg.checkjstring()
                 val sdf = SimpleDateFormat(pattern, Locale.getDefault())
-                return LuaValue.valueOf(sdf.format(Date()))
+                val date = if (timeArg.isnil() || !timeArg.isnumber()) {
+                    Date()
+                } else {
+                    val ts = timeArg.todouble()
+                    // If ts is in seconds (< 100_000_000_000), convert to ms
+                    val ms = if (ts < 100_000_000_000.0) (ts * 1000).toLong() else ts.toLong()
+                    Date(ms)
+                }
+                return LuaValue.valueOf(sdf.format(date))
             }
         })
         engine.set("time", time)
@@ -305,7 +318,18 @@ class LuaEngineBridge(
             value.istable() -> {
                 val table = value.checktable()
                 val len = table.length()
-                if (len > 0) {
+                var hasStringKeys = false
+                var k = LuaValue.NIL
+                while (true) {
+                    val next = table.next(k)
+                    k = next.arg1()
+                    if (k.isnil()) break
+                    if (k.isstring()) {
+                        hasStringKeys = true
+                        break
+                    }
+                }
+                if (!hasStringKeys && len > 0) {
                     val arr = JSONArray()
                     for (i in 1..len) {
                         arr.put(luaToJson(table.get(i)))
@@ -313,13 +337,13 @@ class LuaEngineBridge(
                     arr
                 } else {
                     val obj = JSONObject()
-                    var k = LuaValue.NIL
+                    var key = LuaValue.NIL
                     while (true) {
-                        val next = table.next(k)
-                        k = next.arg1()
-                        if (k.isnil()) break
+                        val next = table.next(key)
+                        key = next.arg1()
+                        if (key.isnil()) break
                         val v = next.arg(2)
-                        obj.put(k.tojstring(), luaToJson(v))
+                        obj.put(key.tojstring(), luaToJson(v))
                     }
                     obj
                 }

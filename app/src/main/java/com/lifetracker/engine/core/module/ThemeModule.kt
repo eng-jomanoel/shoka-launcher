@@ -56,14 +56,26 @@ class ThemeModule(private val context: Context) : EngineModule {
 
     val themesDir: File by lazy {
         val docs = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-        val dir = File(docs, "Shoka/themes").apply { mkdirs() }
+        val dir = File(docs, "Shoka/themes")
+        try {
+            dir.mkdirs()
+        } catch (_: Exception) {}
+
+        val target = if (dir.exists() && dir.canWrite()) {
+            dir
+        } else {
+            val fallback = File(context.filesDir, "Shoka/themes")
+            try { fallback.mkdirs() } catch (_: Exception) {}
+            fallback
+        }
+
         val oldDir = File(docs, "ModularLife/themes")
         if (oldDir.exists() && oldDir.isDirectory) {
             try {
-                oldDir.copyRecursively(dir, overwrite = false)
+                oldDir.copyRecursively(target, overwrite = false)
             } catch (_: Exception) {}
         }
-        dir
+        target
     }
 
     private val _currentThemeName = MutableStateFlow("amoled")

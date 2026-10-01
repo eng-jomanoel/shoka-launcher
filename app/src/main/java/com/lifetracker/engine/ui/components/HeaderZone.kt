@@ -66,7 +66,12 @@ fun HeaderZone(
             }
         }
         val filter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-        val stickyIntent = context.registerReceiver(receiver, filter)
+        val stickyIntent = androidx.core.content.ContextCompat.registerReceiver(
+            context,
+            receiver,
+            filter,
+            androidx.core.content.ContextCompat.RECEIVER_EXPORTED
+        )
         // Pega o valor inicial do sticky broadcast
         stickyIntent?.let {
             val level = it.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)

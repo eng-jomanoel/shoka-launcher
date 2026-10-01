@@ -33,19 +33,36 @@ class AppLauncherModule(
     private val _blockFlow = MutableStateFlow<BlockUiModel?>(null)
     override val blockFlow: StateFlow<BlockUiModel?> = _blockFlow.asStateFlow()
 
+    @Volatile
     private var cachedApps = emptyList<AppItem>()
+    @Volatile
+    private var isLoadingApps = false
+
     fun getInstalledAppNames(): List<String> = cachedApps.map { it.label }
 
     init {
-        // Carrega a lista de apps assincronamente ao iniciar a Engine
+        refreshAppsAsync()
+    }
+
+    fun refreshAppsAsync() {
+        if (isLoadingApps) return
+        isLoadingApps = true
         Thread {
-            cachedApps = loadInstalledApps()
+            try {
+                cachedApps = loadInstalledApps()
+            } finally {
+                isLoadingApps = false
+            }
         }.start()
     }
 
     override fun getSuggestions(args: String): List<CommandSuggestion> {
         val query = args.trim().lowercase()
-        val apps = if (cachedApps.isEmpty()) loadInstalledApps().also { cachedApps = it } else cachedApps
+        val apps = cachedApps
+        if (apps.isEmpty()) {
+            refreshAppsAsync()
+            return emptyList()
+        }
         val matches = if (query.isEmpty()) {
             apps.take(8)
         } else {
@@ -64,7 +81,12 @@ class AppLauncherModule(
         val query = args.trim().lowercase()
         
         if (query == "-h" || query == "--help") {
-            return CommandResult.Success(context.getString(com.lifetracker.engine.R.string.app_launcher_help_full))
+            return CommandResult.Success(context.getString(com.lifetracker.engine.R.string.app_launcher_help_full) + "\n  o -r / reload : Recarrega a lista de apps instalados")
+        }
+
+        if (query == "-r" || query == "--reload" || query == "reload") {
+            cachedApps = withContext(Dispatchers.IO) { loadInstalledApps() }
+            return CommandResult.Success("Lista de aplicativos recarregada (${cachedApps.size} apps encontrados).")
         }
 
         if (query == "-l" || query == "--list") {

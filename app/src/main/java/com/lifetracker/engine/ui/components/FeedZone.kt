@@ -269,7 +269,9 @@ private fun InteractiveCard(
 
         Row(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
         ) {
             block.actions.forEach { action ->
                 Text(
@@ -640,7 +642,10 @@ private fun MediaCard(
             Spacer(modifier = Modifier.height(10.dp))
             Column(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 240.dp)
+                    .verticalScroll(rememberScrollState())
             ) {
                 block.items.forEach { item ->
                     val itemColor = if (item.isActive) EngineTheme.colors.accentGreen else EngineTheme.colors.textPrimary
@@ -861,11 +866,39 @@ private fun WorkoutCard(
                     .padding(vertical = 8.dp, horizontal = 10.dp)
             ) {
                 Column {
-                    Text(
-                        text = "CARGA (KG)",
-                        style = EngineTypography.labelSmall,
-                        color = if (isWeightFocused) EngineTheme.colors.accentAmber else EngineTheme.colors.textMuted
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "CARGA (KG)",
+                            style = EngineTypography.labelSmall,
+                            color = if (isWeightFocused) EngineTheme.colors.accentAmber else EngineTheme.colors.textMuted
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(EngineTheme.colors.cardBorder)
+                                    .clickable { handleActionClick(block.decWeightCmd) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("-", style = EngineTypography.labelSmall, color = EngineTheme.colors.textPrimary)
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(EngineTheme.colors.cardBorder)
+                                    .clickable { handleActionClick(block.incWeightCmd) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("+", style = EngineTypography.labelSmall, color = EngineTheme.colors.textPrimary)
+                            }
+                        }
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -946,11 +979,39 @@ private fun WorkoutCard(
                     .padding(vertical = 8.dp, horizontal = 10.dp)
             ) {
                 Column {
-                    Text(
-                        text = "REPETIÇÕES",
-                        style = EngineTypography.labelSmall,
-                        color = if (isRepsFocused) EngineTheme.colors.accentGreen else EngineTheme.colors.textMuted
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "REPETIÇÕES",
+                            style = EngineTypography.labelSmall,
+                            color = if (isRepsFocused) EngineTheme.colors.accentGreen else EngineTheme.colors.textMuted
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(EngineTheme.colors.cardBorder)
+                                    .clickable { handleActionClick(block.decRepsCmd) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("-", style = EngineTypography.labelSmall, color = EngineTheme.colors.textPrimary)
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clip(RoundedCornerShape(3.dp))
+                                    .background(EngineTheme.colors.cardBorder)
+                                    .clickable { handleActionClick(block.incRepsCmd) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("+", style = EngineTypography.labelSmall, color = EngineTheme.colors.textPrimary)
+                            }
+                        }
+                    }
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -1313,16 +1374,21 @@ private fun NotesCard(
                             modifier = Modifier.weight(1f)
                         )
 
-                        // Botão de deletar
+                        // Botão de deletar com área de toque adequada
                         if (item.deleteCommand != null) {
-                            Text(
-                                text = "✕",
-                                style = EngineTypography.labelSmall,
-                                color = EngineTheme.colors.accentRed.copy(alpha = 0.6f),
+                            Box(
                                 modifier = Modifier
-                                    .clickable { onActionClick(item.deleteCommand) }
-                                    .padding(start = 8.dp, top = 2.dp, bottom = 2.dp)
-                            )
+                                    .size(28.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .clickable { onActionClick(item.deleteCommand) },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "✕",
+                                    style = EngineTypography.labelSmall,
+                                    color = EngineTheme.colors.accentRed.copy(alpha = 0.7f)
+                                )
+                            }
                         }
                     }
                 }
@@ -1382,7 +1448,7 @@ private fun AgendaCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(max = 350.dp)
+                    .heightIn(max = 480.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
@@ -1484,8 +1550,16 @@ private fun AgendaCard(
                 if (block.events.isNotEmpty()) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         block.events.forEach { event ->
-                            val colorInt = event.colorHex?.toIntOrNull()
-                            val parsedColor = if (colorInt != null) Color(colorInt) else EngineTheme.colors.accentCyan
+                            val parsedColor = if (!event.colorHex.isNullOrBlank()) {
+                                try {
+                                    val clean = if (event.colorHex.startsWith("#")) event.colorHex else "#${event.colorHex}"
+                                    Color(android.graphics.Color.parseColor(clean))
+                                } catch (_: Exception) {
+                                    EngineTheme.colors.accentCyan
+                                }
+                            } else {
+                                EngineTheme.colors.accentCyan
+                            }
                             
                             Row(
                                 modifier = Modifier
@@ -1529,6 +1603,23 @@ private fun AgendaCard(
                                     color = EngineTheme.colors.textSecondary,
                                     textAlign = TextAlign.End
                                 )
+
+                                if (event.deleteCommand != null) {
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .clickable { onActionClick(event.deleteCommand) },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "✕",
+                                            style = EngineTypography.labelMedium,
+                                            color = EngineTheme.colors.textMuted
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -1603,14 +1694,19 @@ private fun AgendaCard(
                                 )
         
                                 if (item.deleteCommand != null) {
-                                    Text(
-                                        text = "✕",
-                                        style = EngineTypography.labelSmall,
-                                        color = EngineTheme.colors.accentRed.copy(alpha = 0.6f),
+                                    Box(
                                         modifier = Modifier
-                                            .clickable { onActionClick(item.deleteCommand) }
-                                            .padding(start = 8.dp, top = 2.dp, bottom = 2.dp)
-                                    )
+                                            .size(28.dp)
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .clickable { onActionClick(item.deleteCommand) },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "✕",
+                                            style = EngineTypography.labelSmall,
+                                            color = EngineTheme.colors.accentRed.copy(alpha = 0.7f)
+                                        )
+                                    }
                                 }
                             }
                         }

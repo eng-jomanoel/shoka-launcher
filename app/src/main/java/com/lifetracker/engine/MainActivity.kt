@@ -68,25 +68,30 @@ class MainActivity : ComponentActivity() {
         currentActivity = this
     }
 
+    private val kioskPrefs by lazy {
+        getSharedPreferences("modular_kiosk_prefs", android.content.Context.MODE_PRIVATE)
+    }
+
+    var isKioskEnabled: Boolean
+        get() = kioskPrefs.getBoolean("kiosk_enabled", false)
+        set(value) = kioskPrefs.edit().putBoolean("kiosk_enabled", value).apply()
+
     override fun onResume() {
         super.onResume()
         currentActivity = this
         
-        try {
-            val dpm = getSystemService(android.content.Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-            val adminComponentName = ComponentName(this, AdminReceiver::class.java)
+        if (isKioskEnabled) {
+            try {
+                val dpm = getSystemService(android.content.Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+                val adminComponentName = ComponentName(this, AdminReceiver::class.java)
 
-            if (dpm.isDeviceOwnerApp(packageName)) {
-                // Modo Kiosk Silencioso e Absoluto (Sem pop-up chato)
-                dpm.setLockTaskPackages(adminComponentName, arrayOf(packageName))
+                if (dpm.isDeviceOwnerApp(packageName)) {
+                    dpm.setLockTaskPackages(adminComponentName, arrayOf(packageName))
+                }
                 startLockTask()
-            } else {
-                // Modo Kiosk Normal (Com pop-up de segurança pedindo 'OK')
-                // Se a pessoa desativar a opção B, é só comentar o startLockTask() aqui.
-                startLockTask()
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
 
@@ -102,8 +107,9 @@ class MainActivity : ComponentActivity() {
         
         val appLauncher = com.lifetracker.engine.modules.system.AppLauncherModule(appCtx) { intent ->
             try {
-                // Remove o pin temporariamente para permitir que outro app venha para a frente
-                currentActivity?.stopLockTask()
+                if (isKioskEnabled) {
+                    currentActivity?.stopLockTask()
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -117,12 +123,13 @@ class MainActivity : ComponentActivity() {
             context = appCtx,
             moduleRegistry = moduleRegistry,
             onOpenApp = { query ->
-                // Permite que scripts Lua abram apps do sistema
                 try {
                     val pm = appCtx.packageManager
                     val intent = pm.getLaunchIntentForPackage(query)
                     if (intent != null) {
-                        try { currentActivity?.stopLockTask() } catch (_: Exception) {}
+                        try {
+                            if (isKioskEnabled) currentActivity?.stopLockTask()
+                        } catch (_: Exception) {}
                         intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                         appCtx.startActivity(intent)
                     }
@@ -136,18 +143,37 @@ class MainActivity : ComponentActivity() {
         moduleRegistry.register(com.lifetracker.engine.modules.system.SysCtlModule(
             context = appCtx,
             onBrightnessChange = { brightness ->
-                // Modifica o brilho da janela da Activity ativa
                 currentActivity?.let { act ->
-                    val layoutParams = act.window.attributes
-                    layoutParams.screenBrightness = brightness.coerceIn(0.01f, 1f)
-                    act.window.attributes = layoutParams
+                    act.runOnUiThread {
+                        val layoutParams = act.window.attributes
+                        layoutParams.screenBrightness = brightness.coerceIn(0.01f, 1f)
+                        act.window.attributes = layoutParams
+                    }
+                }
+            },
+            onPin = {
+                isKioskEnabled = true
+                currentActivity?.runOnUiThread {
+                    try {
+                        val dpm = getSystemService(android.content.Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+                        val adminComponentName = ComponentName(this@MainActivity, AdminReceiver::class.java)
+                        if (dpm.isDeviceOwnerApp(packageName)) {
+                            dpm.setLockTaskPackages(adminComponentName, arrayOf(packageName))
+                        }
+                        currentActivity?.startLockTask()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
             },
             onUnpin = {
-                try {
-                    currentActivity?.stopLockTask()
-                } catch (e: Exception) {
-                    e.printStackTrace()
+                isKioskEnabled = false
+                currentActivity?.runOnUiThread {
+                    try {
+                        currentActivity?.stopLockTask()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
             },
             onReload = {

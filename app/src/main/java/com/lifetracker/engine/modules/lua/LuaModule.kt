@@ -40,11 +40,13 @@ class LuaModule(
     override val hasUi: Boolean
         get() = true
 
+    private val luaLock = Any()
+
     override fun getSuggestions(args: String): List<CommandSuggestion> {
         try {
-            val autoFunc = moduleTable?.get("autocomplete")
+            val autoFunc = synchronized(luaLock) { moduleTable?.get("autocomplete") }
             if (autoFunc != null && autoFunc.isfunction()) {
-                val res = autoFunc.call(LuaValue.valueOf(args))
+                val res = synchronized(luaLock) { autoFunc.call(LuaValue.valueOf(args)) }
                 if (res.istable()) {
                     val table = res.checktable()
                     val list = mutableListOf<CommandSuggestion>()
@@ -60,7 +62,9 @@ class LuaModule(
                             ))
                         } else if (item.istable()) {
                             val itab = item.checktable()
-                            val rawCmd = itab.get("command").optjstring(itab.get(1).optjstring(""))
+                            val rawCmd = itab.get("command").optjstring(
+                                itab.get("cmd").optjstring(itab.get(1).optjstring(""))
+                            )
                             val fullCmd = if (rawCmd.startsWith("$commandPrefix ")) rawCmd else "$commandPrefix $rawCmd"
                             val label = itab.get("label").optjstring(fullCmd)
                             val isExec = itab.get("executable").optboolean(!fullCmd.endsWith(" "))
@@ -77,15 +81,48 @@ class LuaModule(
         val q = args.trim().lowercase()
         val block = _blockFlow.value
         val fallbackList = mutableListOf<CommandSuggestion>()
-        if (block is BlockUiModel.Workout) {
-            val cmds = listOf("check", "pular", "files", "load ", "day ", "list", "reset", "uncheck")
-            cmds.forEach { c ->
-                fallbackList.add(CommandSuggestion(
-                    command = "$commandPrefix $c",
-                    displayText = "$commandPrefix $c",
-                    isExecutable = !c.endsWith(" ")
-                ))
+        when (block) {
+            is BlockUiModel.Workout -> {
+                val cmds = listOf("check", "pular", "files", "load ", "day ", "list", "reset", "uncheck")
+                cmds.forEach { c ->
+                    fallbackList.add(CommandSuggestion(
+                        command = "$commandPrefix $c",
+                        displayText = "$commandPrefix $c",
+                        isExecutable = !c.endsWith(" ")
+                    ))
+                }
             }
+            is BlockUiModel.Media -> {
+                val cmds = listOf("play", "pause", "resume", "next", "prev", "loop", "shuf", "queue", "pl", "scan")
+                cmds.forEach { c ->
+                    fallbackList.add(CommandSuggestion(
+                        command = "$commandPrefix $c",
+                        displayText = "$commandPrefix $c",
+                        isExecutable = !c.endsWith(" ")
+                    ))
+                }
+            }
+            is BlockUiModel.Notes -> {
+                val cmds = listOf("add ", "clear", "list")
+                cmds.forEach { c ->
+                    fallbackList.add(CommandSuggestion(
+                        command = "$commandPrefix $c",
+                        displayText = "$commandPrefix $c",
+                        isExecutable = !c.endsWith(" ")
+                    ))
+                }
+            }
+            is BlockUiModel.Agenda -> {
+                val cmds = listOf("today", "hoje", "vw month", "vw week", "vw day", "next", "prev", "clear", "clear_evt", "[] ", "todo ", "evt ", "sel ")
+                cmds.forEach { c ->
+                    fallbackList.add(CommandSuggestion(
+                        command = "$commandPrefix $c",
+                        displayText = "$commandPrefix $c",
+                        isExecutable = !c.endsWith(" ")
+                    ))
+                }
+            }
+            else -> {}
         }
         return if (q.isEmpty()) fallbackList else fallbackList.filter { it.command.contains(q) }
     }
@@ -95,63 +132,67 @@ class LuaModule(
     }
 
     fun reload(): Boolean {
-        return try {
-            bridge.inject(globals)
-            val chunk = globals.loadfile(scriptFile.absolutePath)
-            val result = chunk.call()
-            
-            if (result.istable()) {
-                moduleTable = result.checktable()
+        return synchronized(luaLock) {
+            try {
+                bridge.inject(globals)
+                val chunk = globals.loadfile(scriptFile.absolutePath)
+                val result = chunk.call()
                 
-                val modId = moduleTable?.get("id")
-                if (modId != null && !modId.isnil()) id = modId.tojstring()
+                if (result.istable()) {
+                    moduleTable = result.checktable()
+                    
+                    val modId = moduleTable?.get("id")
+                    if (modId != null && !modId.isnil()) id = modId.tojstring()
 
-                val modName = moduleTable?.get("name")
-                if (modName != null && !modName.isnil()) name = modName.tojstring()
+                    val modName = moduleTable?.get("name")
+                    if (modName != null && !modName.isnil()) name = modName.tojstring()
 
-                val modPrefix = moduleTable?.get("prefix")
-                if (modPrefix != null && !modPrefix.isnil()) commandPrefix = modPrefix.tojstring()
+                    val modPrefix = moduleTable?.get("prefix")
+                    if (modPrefix != null && !modPrefix.isnil()) commandPrefix = modPrefix.tojstring()
 
-                val modHelp = moduleTable?.get("help")
-                if (modHelp != null && !modHelp.isnil()) helpText = modHelp.tojstring()
+                    val modHelp = moduleTable?.get("help")
+                    if (modHelp != null && !modHelp.isnil()) helpText = modHelp.tojstring()
 
-                updateUi()
-                true
-            } else {
+                    updateUi()
+                    true
+                } else {
+                    false
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+                _blockFlow.value = BlockUiModel.Info(
+                    moduleId = id,
+                    title = "Erro Lua: $name",
+                    description = e.message ?: "Erro ao carregar script",
+                    tag = "ERR",
+                    tagColor = Color.Red
+                )
                 false
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            _blockFlow.value = BlockUiModel.Info(
-                moduleId = id,
-                title = "Erro Lua: $name",
-                description = e.message ?: "Erro ao carregar script",
-                tag = "ERR",
-                tagColor = Color.Red
-            )
-            false
         }
     }
 
     private var tickerJob: Job? = null
 
     fun updateUi() {
-        try {
-            val renderFunc = moduleTable?.get("render")
-            if (renderFunc != null && renderFunc.isfunction()) {
-                val blockVal = renderFunc.call()
-                if (blockVal.istable()) {
-                    val table = blockVal.checktable()
-                    val block = parseBlock(table)
-                    _blockFlow.value = block
-                    checkTicker(block)
-                    return
+        synchronized(luaLock) {
+            try {
+                val renderFunc = moduleTable?.get("render")
+                if (renderFunc != null && renderFunc.isfunction()) {
+                    val blockVal = renderFunc.call()
+                    if (blockVal.istable()) {
+                        val table = blockVal.checktable()
+                        val block = parseBlock(table)
+                        _blockFlow.value = block
+                        checkTicker(block)
+                        return
+                    }
                 }
+                _blockFlow.value = null
+                stopTicker()
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
-            _blockFlow.value = null
-            stopTicker()
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
 
@@ -351,7 +392,8 @@ class LuaModule(
                             isAllDay = ev.get("all_day").optboolean(false),
                             location = if (ev.get("location").isnil()) null else ev.get("location").tojstring(),
                             colorHex = if (ev.get("color").isnil()) null else ev.get("color").tojstring(),
-                            commandToExecute = if (ev.get("cmd").isnil()) null else ev.get("cmd").tojstring()
+                            commandToExecute = if (ev.get("cmd").isnil()) null else ev.get("cmd").tojstring(),
+                            deleteCommand = if (ev.get("delete_cmd").isnil()) null else ev.get("delete_cmd").tojstring()
                         ))
                     }
                 }
@@ -533,28 +575,30 @@ class LuaModule(
     }
 
     override suspend fun executeCommand(args: String): CommandResult {
-        return try {
-            val trimmed = args.trim()
-            if (trimmed == "-h" || trimmed == "--help") {
-                return CommandResult.Success("MÓDULO LUA: $name ($commandPrefix)\nAjuda: $helpText")
-            }
-
-            val onCommandFunc = moduleTable?.get("on_command")
-            if (onCommandFunc != null && onCommandFunc.isfunction()) {
-                val res = onCommandFunc.call(LuaValue.valueOf(trimmed))
-                updateUi() // Atualiza a UI após executar o comando
-                if (res.isstring()) {
-                    CommandResult.Success(res.tojstring())
-                } else {
-                    CommandResult.Success("Comando executado.")
+        return synchronized(luaLock) {
+            try {
+                val trimmed = args.trim()
+                if (trimmed == "-h" || trimmed == "--help") {
+                    return@synchronized CommandResult.Success("MÓDULO LUA: $name ($commandPrefix)\nAjuda: $helpText")
                 }
-            } else {
-                CommandResult.Error("O script não implementou a função 'on_command(args)'.")
+
+                val onCommandFunc = moduleTable?.get("on_command")
+                if (onCommandFunc != null && onCommandFunc.isfunction()) {
+                    val res = onCommandFunc.call(LuaValue.valueOf(trimmed))
+                    updateUi() // Atualiza a UI após executar o comando
+                    if (res.isstring()) {
+                        CommandResult.Success(res.tojstring())
+                    } else {
+                        CommandResult.Success("Comando executado.")
+                    }
+                } else {
+                    CommandResult.Error("O script não implementou a função 'on_command(args)'.")
+                }
+            } catch (e: LuaError) {
+                CommandResult.Error("Erro Lua: ${e.message}")
+            } catch (e: Exception) {
+                CommandResult.Error("Erro: ${e.message}")
             }
-        } catch (e: LuaError) {
-            CommandResult.Error("Erro Lua: ${e.message}")
-        } catch (e: Exception) {
-            CommandResult.Error("Erro: ${e.message}")
         }
     }
 }

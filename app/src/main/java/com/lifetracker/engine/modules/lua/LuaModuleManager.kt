@@ -13,23 +13,35 @@ class LuaModuleManager(
 ) {
     val rootDir: File by lazy {
         val docs = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
-        val shokaDir = File(docs, "Shoka").apply { mkdirs() }
+        val shokaDir = File(docs, "Shoka")
+        try {
+            shokaDir.mkdirs()
+        } catch (_: Exception) {}
+
+        val target = if (shokaDir.exists() && shokaDir.canWrite()) {
+            shokaDir
+        } else {
+            val fallback = File(context.filesDir, "Shoka")
+            try { fallback.mkdirs() } catch (_: Exception) {}
+            fallback
+        }
+
         // Auto-migration: if old ModularLife folder exists, copy files to Shoka
         val oldDir = File(docs, "ModularLife")
         if (oldDir.exists() && oldDir.isDirectory) {
             try {
-                oldDir.copyRecursively(shokaDir, overwrite = false)
+                oldDir.copyRecursively(target, overwrite = false)
             } catch (_: Exception) {}
         }
-        shokaDir
+        target
     }
 
     val modulesDir: File by lazy {
-        File(rootDir, "modules").apply { mkdirs() }
+        File(rootDir, "modules").apply { try { mkdirs() } catch (_: Exception) {} }
     }
 
     val dataDir: File by lazy {
-        File(rootDir, "data").apply { mkdirs() }
+        File(rootDir, "data").apply { try { mkdirs() } catch (_: Exception) {} }
     }
 
     private val bridge: LuaEngineBridge by lazy {
@@ -56,7 +68,26 @@ class LuaModuleManager(
     private val activeLuaModules = mutableListOf<LuaModule>()
 
     fun init() {
+        deployBundledModules()
         loadAllModules()
+    }
+
+    private fun deployBundledModules() {
+        try {
+            val assetModules = context.assets.list("modules") ?: return
+            for (assetName in assetModules) {
+                val targetFile = File(modulesDir, assetName)
+                if (!targetFile.exists()) {
+                    context.assets.open("modules/$assetName").use { input ->
+                        targetFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     fun reloadAll(): Int {

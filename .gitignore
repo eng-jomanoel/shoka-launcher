@@ -17,8 +17,9 @@ local.properties
 # IDE
 /.idea/
 
-# Lua modules (kept in separate repo)
+# Lua modules (kept in separate repo, except bundled assets)
 *.lua
+!app/src/main/assets/modules/*.lua
 
 # Build outputs
 /app/build/

@@ -50,6 +50,7 @@ fun HomeScreen(
     var lastCommandResult by remember { mutableStateOf<CommandResult?>(null) }
     var currentInput by remember { mutableStateOf("") }
     var isDefault by remember { mutableStateOf(isDefaultLauncher(context)) }
+    var hasStoragePermission by remember { mutableStateOf(checkStoragePermission()) }
     var clearResultJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
 
     // Atualiza o banner sempre que o app volta para a tela (ex: ao voltar das configurações)
@@ -57,6 +58,14 @@ fun HomeScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 isDefault = isDefaultLauncher(context)
+                val granted = checkStoragePermission()
+                if (!hasStoragePermission && granted) {
+                    try {
+                        com.lifetracker.engine.MainActivity.luaManager.reloadAll()
+                        com.lifetracker.engine.MainActivity.themeModule.ensureDefaultThemes()
+                    } catch (_: Exception) {}
+                }
+                hasStoragePermission = granted
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -88,9 +97,14 @@ fun HomeScreen(
                 val result = moduleRegistry.dispatch(command)
                 lastCommandResult = result
                 currentInput = ""
-                // Faz a mensagem de retorno sumir automaticamente após 4 segundos (exceto telas longas como help)
+                // Faz a mensagem de retorno sumir automaticamente respeitando o tamanho do texto
                 if (result !is CommandResult.Ignored) {
-                    val delayMs = if (trimmed.equals("help", ignoreCase = true)) 10000L else 4000L
+                    val delayMs = when {
+                        result is CommandResult.Error -> 8000L
+                        result is CommandResult.Success && (result.message.contains("\n") || result.message.length > 80) -> 12000L
+                        trimmed.equals("help", ignoreCase = true) -> 12000L
+                        else -> 4500L
+                    }
                     clearResultJob = coroutineScope.launch {
                         kotlinx.coroutines.delay(delayMs)
                         lastCommandResult = null
@@ -120,7 +134,33 @@ fun HomeScreen(
             modifier = Modifier.weight(1f)
         )
 
-        // Banner movido para a parte de baixo (acima do terminal CLI)
+        // Banner de permissão de armazenamento no Android 11+
+        if (!hasStoragePermission) {
+            Text(
+                text = "⚠️ Permissão de Armazenamento necessária para ler plugins e temas (Toque para conceder)",
+                color = androidx.compose.ui.graphics.Color.White,
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(EngineTheme.colors.accentRed)
+                    .clickable {
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                            try {
+                                val uri = android.net.Uri.parse("package:${context.packageName}")
+                                context.startActivity(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, uri))
+                            } catch (_: Exception) {
+                                try {
+                                    context.startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+                                } catch (_: Exception) {}
+                            }
+                        }
+                    }
+                    .padding(vertical = 8.dp),
+                style = EngineTypography.labelSmall
+            )
+        }
+
+        // Banner de launcher padrão
         if (!isDefault) {
             Text(
                 text = androidx.compose.ui.res.stringResource(id = com.lifetracker.engine.R.string.set_default_launcher),
@@ -167,4 +207,12 @@ private fun isDefaultLauncher(context: Context): Boolean {
     intent.addCategory(Intent.CATEGORY_HOME)
     val resolveInfo = context.packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
     return resolveInfo?.activityInfo?.packageName == context.packageName
+}
+
+private fun checkStoragePermission(): Boolean {
+    return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+        android.os.Environment.isExternalStorageManager()
+    } else {
+        true
+    }
 }

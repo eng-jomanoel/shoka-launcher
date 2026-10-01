@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class SysCtlModule(
     private val context: Context,
     private val onBrightnessChange: (Float) -> Unit,
+    private val onPin: () -> Unit = {},
     private val onUnpin: () -> Unit = {},
     private val onReload: () -> Int = { 0 }
 ) : EngineModule {
@@ -21,7 +22,7 @@ class SysCtlModule(
     override val id: String = "sysctl"
     override val name: String = "System"
     override val commandPrefix: String = "sys"
-    override val helpText: String = "sys <vol | bri> <0-100> | sys reload | sys unpin | sys remove-admin"
+    override val helpText: String = "sys <vol | bri> <0-100> | sys reload | sys pin | sys unpin | sys remove-admin"
 
     private val _blockFlow = MutableStateFlow<BlockUiModel?>(null)
     override val blockFlow: StateFlow<BlockUiModel?> = _blockFlow.asStateFlow()
@@ -30,6 +31,7 @@ class SysCtlModule(
         val query = args.trim().lowercase()
         val all = listOf(
             CommandSuggestion("sys reload", "sys reload", true),
+            CommandSuggestion("sys pin", "sys pin", true),
             CommandSuggestion("sys unpin", "sys unpin", true),
             CommandSuggestion("sys vol ", "sys vol <0-100>", false),
             CommandSuggestion("sys bri ", "sys bri <0-100>", false),
@@ -47,7 +49,8 @@ class SysCtlModule(
                 "  sys vol <0-100>    : Define o volume de mídia\n" +
                 "  sys bri <0-100>    : Define o brilho da tela (neste app)\n" +
                 "  sys reload         : Recarrega todos os módulos Lua da pasta Documents\n" +
-                "  sys unpin          : Desativa temporariamente a trava de tela\n" +
+                "  sys pin            : Ativa o Modo Kiosk (fixação de tela)\n" +
+                "  sys unpin          : Desativa o Modo Kiosk (destrava a tela)\n" +
                 "  sys remove-admin   : Remove privilégios de Device Owner\n" +
                 "  sys -h             : Mostra esta ajuda"
             )
@@ -58,9 +61,14 @@ class SysCtlModule(
             return CommandResult.Success("Módulos Lua recarregados com sucesso ($count carregados).")
         }
 
-        if (tokens[0] == "unpin") {
+        if (tokens[0] == "pin" || (tokens[0] == "kiosk" && tokens.getOrNull(1) == "on")) {
+            onPin()
+            return CommandResult.Success("Modo Kiosk (fixação de tela) ativado.")
+        }
+
+        if (tokens[0] == "unpin" || (tokens[0] == "kiosk" && tokens.getOrNull(1) == "off")) {
             onUnpin()
-            return CommandResult.Success("Modo Kiosk destravado temporariamente.")
+            return CommandResult.Success("Modo Kiosk desativado.")
         }
 
         if (tokens[0] == "remove-admin") {
