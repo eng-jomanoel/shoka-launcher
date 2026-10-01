@@ -1640,5 +1640,61 @@ private fun AgendaCard(
                 }
             }
         }
+
+        // ── Input Field ──
+        if (block.inputHint != null && block.inputCommand != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            var textState by remember { mutableStateOf(TextFieldValue("")) }
+            val focusManager = LocalFocusManager.current
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(EngineTheme.colors.background, RoundedCornerShape(4.dp))
+                    .border(1.dp, EngineTheme.colors.cardBorder, RoundedCornerShape(4.dp))
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BasicTextField(
+                    value = textState,
+                    onValueChange = { textState = it },
+                    textStyle = EngineTypography.bodyMedium.copy(color = EngineTheme.colors.textPrimary),
+                    modifier = Modifier.weight(1f),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(
+                        onSend = {
+                            if (textState.text.isNotBlank()) {
+                                onActionClick("${block.inputCommand} ${textState.text}")
+                                textState = TextFieldValue("")
+                                focusManager.clearFocus()
+                            }
+                        }
+                    ),
+                    decorationBox = { innerTextField ->
+                        if (textState.text.isEmpty()) {
+                            Text(
+                                text = block.inputHint,
+                                style = EngineTypography.bodyMedium,
+                                color = EngineTheme.colors.textMuted
+                            )
+                        }
+                        innerTextField()
+                    }
+                )
+                if (textState.text.isNotBlank()) {
+                    Text(
+                        text = "Enviar",
+                        style = EngineTypography.labelMedium,
+                        color = EngineTheme.colors.accentGreen,
+                        modifier = Modifier
+                            .clickable {
+                                onActionClick("${block.inputCommand} ${textState.text}")
+                                textState = TextFieldValue("")
+                                focusManager.clearFocus()
+                            }
+                            .padding(start = 8.dp)
+                    )
+                }
+            }
+        }
     }
 }

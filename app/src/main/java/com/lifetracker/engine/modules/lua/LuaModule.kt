@@ -419,7 +419,9 @@ class LuaModule(
                 days = days,
                 events = events,
                 tasks = tasks,
-                actions = actions
+                actions = actions,
+                inputHint = if (table.get("input_hint").isnil()) null else table.get("input_hint").tojstring(),
+                inputCommand = if (table.get("input_cmd").isnil()) null else table.get("input_cmd").tojstring()
             )
         }
 

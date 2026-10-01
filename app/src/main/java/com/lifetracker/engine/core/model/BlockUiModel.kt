@@ -127,7 +127,9 @@ sealed interface BlockUiModel {
         val days: List<CalendarDay> = emptyList(),
         val events: List<AgendaEvent> = emptyList(),
         val tasks: List<NoteItem> = emptyList(), // Reusa NoteItem para tarefas
-        val actions: List<BlockAction> = emptyList()
+        val actions: List<BlockAction> = emptyList(),
+        val inputHint: String? = null,
+        val inputCommand: String? = null
     ) : BlockUiModel
 
     data class CalendarDay(
