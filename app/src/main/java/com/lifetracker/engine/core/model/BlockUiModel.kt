@@ -102,6 +102,7 @@ sealed interface BlockUiModel {
         override val title: String,
         val subtitle: String? = null,
         val isOpen: Boolean = true,
+        val content: String = "",
         val items: List<NoteItem> = emptyList(),
         val actions: List<BlockAction> = emptyList(),
         val inputHint: String? = null,

@@ -1282,200 +1282,108 @@ private fun NotesCard(
     block: BlockUiModel.Notes,
     onActionClick: (String) -> Unit
 ) {
-    CardContainer {
-        // ── Header ──
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = block.title, style = EngineTypography.titleMedium)
-                if (!block.subtitle.isNullOrEmpty()) {
-                    Text(
-                        text = block.subtitle,
-                        style = EngineTypography.labelSmall,
-                        color = EngineTheme.colors.textSecondary
-                    )
-                }
-            }
+    var textValue by remember(block.content) { mutableStateOf(TextFieldValue(block.content)) }
+    var isFocused by remember { mutableStateOf(false) }
+    var hasUnsavedChanges by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
 
-            // Contagem de itens checklist
-            if (block.items.isNotEmpty()) {
-                val checked = block.items.count { it.isChecklist && it.isChecked }
-                val checklists = block.items.count { it.isChecklist }
-                if (checklists > 0) {
-                    Text(
-                        text = "$checked/$checklists",
-                        style = EngineTypography.labelSmall,
-                        color = EngineTheme.colors.accentGreen
-                    )
-                }
-            }
+    fun commitSave() {
+        if (hasUnsavedChanges) {
+            onActionClick("n set ${textValue.text}")
+            hasUnsavedChanges = false
         }
+    }
 
-        if (block.isOpen) {
-            if (block.items.isEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(EngineTheme.colors.cardBorder.copy(alpha = 0.25f))
-                        .padding(vertical = 16.dp, horizontal = 12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Nenhuma anotação no momento.",
-                        style = EngineTypography.bodyMedium,
-                        color = EngineTheme.colors.textMuted,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            } else {
-                Spacer(modifier = Modifier.height(8.dp))
+    CardContainer {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // ── Header ──
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = block.title, style = EngineTypography.titleMedium)
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(max = 300.dp)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    block.items.forEach { item ->
-                        Row(
+                    if (hasUnsavedChanges) {
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
                                 .clip(RoundedCornerShape(4.dp))
-                                .then(
-                                    if (item.isChecklist && item.toggleCommand != null) {
-                                        Modifier.clickable { onActionClick(item.toggleCommand) }
-                                    } else Modifier
-                                )
-                                .padding(vertical = 4.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .background(EngineTheme.colors.accentGreen.copy(alpha = 0.15f))
+                                .clickable {
+                                    commitSave()
+                                    focusManager.clearFocus()
+                                }
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
                         ) {
-                            if (item.isChecklist) {
-                                // Checkbox visual
-                                val boxColor = if (item.isChecked) EngineTheme.colors.accentGreen
-                                    else EngineTheme.colors.cardBorder
-                                Box(
-                                    modifier = Modifier
-                                        .size(18.dp)
-                                        .clip(RoundedCornerShape(3.dp))
-                                        .border(1.5f.dp, boxColor, RoundedCornerShape(3.dp))
-                                        .background(
-                                            if (item.isChecked) EngineTheme.colors.accentGreen.copy(alpha = 0.15f)
-                                            else Color.Transparent
-                                        ),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (item.isChecked) {
-                                        Text(
-                                            text = "✓",
-                                            style = EngineTypography.labelSmall,
-                                            color = EngineTheme.colors.accentGreen
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.width(8.dp))
-                            } else {
-                                // Bullet simples
-                                Text(
-                                    text = "•",
-                                    style = EngineTypography.bodyMedium,
-                                    color = EngineTheme.colors.accentCyan,
-                                    modifier = Modifier.padding(end = 8.dp)
-                                )
-                            }
-
-                            // Texto do item
                             Text(
-                                text = item.text,
-                                style = EngineTypography.bodyMedium,
-                                color = if (item.isChecked) EngineTheme.colors.textMuted
-                                    else EngineTheme.colors.textPrimary,
-                                textDecoration = if (item.isChecked) TextDecoration.LineThrough
-                                    else TextDecoration.None,
-                                modifier = Modifier.weight(1f)
+                                text = "Salvar",
+                                style = EngineTypography.labelSmall,
+                                color = EngineTheme.colors.accentGreen
                             )
-
-                            // Botão de deletar com área de toque adequada
-                            if (item.deleteCommand != null) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .clickable { onActionClick(item.deleteCommand) },
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = "✕",
-                                        style = EngineTypography.labelSmall,
-                                        color = EngineTheme.colors.accentRed.copy(alpha = 0.7f)
-                                    )
+                        }
+                    }
+                    if (block.content.isNotBlank() || textValue.text.isNotBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .clickable {
+                                    textValue = TextFieldValue("")
+                                    hasUnsavedChanges = false
+                                    focusManager.clearFocus()
+                                    onActionClick("n clear")
                                 }
-                            }
+                                .padding(horizontal = 6.dp, vertical = 3.dp)
+                        ) {
+                            Text(
+                                text = "Limpar",
+                                style = EngineTypography.labelSmall,
+                                color = EngineTheme.colors.textMuted
+                            )
                         }
                     }
                 }
             }
-        }
 
-        // ── Actions ──
-        if (block.actions.isNotEmpty()) {
             Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
-            ) {
-                block.actions.forEach { action ->
-                    Text(
-                        text = action.label,
-                        style = EngineTypography.titleMedium,
-                        color = EngineTheme.colors.accentCyan,
-                        modifier = Modifier
-                            .clickable { onActionClick(action.commandToExecute) }
-                            .padding(vertical = 4.dp)
-                    )
-                }
-            }
-        }
 
-        // ── Input Field ──
-        if (block.inputHint != null && block.inputCommand != null) {
-            Spacer(modifier = Modifier.height(10.dp))
-            var textState by remember { mutableStateOf(TextFieldValue("")) }
-            val focusManager = LocalFocusManager.current
-            Row(
+            // ── Bloco de Notas (Área de Texto Multilinha) ──
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(EngineTheme.colors.background, RoundedCornerShape(4.dp))
-                    .border(1.dp, EngineTheme.colors.cardBorder, RoundedCornerShape(4.dp))
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .heightIn(min = 90.dp, max = 220.dp)
+                    .background(EngineTheme.colors.background, RoundedCornerShape(6.dp))
+                    .border(
+                        width = 1.dp,
+                        color = if (isFocused) EngineTheme.colors.accentCyan else EngineTheme.colors.cardBorder,
+                        shape = RoundedCornerShape(6.dp)
+                    )
+                    .padding(10.dp)
             ) {
                 BasicTextField(
-                    value = textState,
-                    onValueChange = { textState = it },
-                    textStyle = EngineTypography.bodyMedium.copy(color = EngineTheme.colors.textPrimary),
-                    modifier = Modifier.weight(1f),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                    keyboardActions = KeyboardActions(
-                        onSend = {
-                            if (textState.text.isNotBlank()) {
-                                onActionClick("${block.inputCommand} ${textState.text}")
-                                textState = TextFieldValue("")
-                                focusManager.clearFocus()
+                    value = textValue,
+                    onValueChange = {
+                        textValue = it
+                        hasUnsavedChanges = (it.text != block.content)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .onFocusChanged { focusState ->
+                            isFocused = focusState.isFocused
+                            if (!focusState.isFocused && hasUnsavedChanges) {
+                                commitSave()
                             }
-                        }
-                    ),
+                        },
+                    textStyle = EngineTypography.bodyMedium.copy(color = EngineTheme.colors.textPrimary),
+                    cursorBrush = SolidColor(EngineTheme.colors.accentCyan),
                     decorationBox = { innerTextField ->
-                        if (textState.text.isEmpty()) {
+                        if (textValue.text.isEmpty()) {
                             Text(
-                                text = block.inputHint,
+                                text = "Toque para anotar...",
                                 style = EngineTypography.bodyMedium,
                                 color = EngineTheme.colors.textMuted
                             )
@@ -1483,20 +1391,6 @@ private fun NotesCard(
                         innerTextField()
                     }
                 )
-                if (textState.text.isNotBlank()) {
-                    Text(
-                        text = "Salvar",
-                        style = EngineTypography.labelMedium,
-                        color = EngineTheme.colors.accentGreen,
-                        modifier = Modifier
-                            .clickable {
-                                onActionClick("${block.inputCommand} ${textState.text}")
-                                textState = TextFieldValue("")
-                                focusManager.clearFocus()
-                            }
-                            .padding(start = 8.dp)
-                    )
-                }
             }
         }
     }

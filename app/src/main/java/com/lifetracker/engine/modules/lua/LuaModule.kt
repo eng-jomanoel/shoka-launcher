@@ -366,11 +366,14 @@ class LuaModule(
                 }
             }
 
+            val content = if (table.get("content").isnil()) "" else table.get("content").tojstring()
+
             return BlockUiModel.Notes(
                 moduleId = id,
                 title = blockTitle,
                 subtitle = if (table.get("subtitle").isnil()) null else table.get("subtitle").tojstring(),
                 isOpen = table.get("is_open").optboolean(true),
+                content = content,
                 items = items,
                 actions = actions,
                 inputHint = if (table.get("input_hint").isnil()) null else table.get("input_hint").tojstring(),
