@@ -133,11 +133,13 @@ sealed interface BlockUiModel {
     ) : BlockUiModel
 
     data class CalendarDay(
-        val dayNumber: Int, // -1 para espacos vazios
+        val dayNumber: Int,
         val isToday: Boolean = false,
         val isSelected: Boolean = false,
         val hasEvents: Boolean = false,
         val hasTasks: Boolean = false,
+        val dayOfWeekLabel: String = "",
+        val fullDateStr: String = "",
         val commandToExecute: String? = null
     )
 

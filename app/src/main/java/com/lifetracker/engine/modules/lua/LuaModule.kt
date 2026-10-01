@@ -446,6 +446,8 @@ class LuaModule(
                             isSelected = d.get("is_selected").optboolean(false),
                             hasEvents = d.get("has_events").optboolean(false),
                             hasTasks = d.get("has_tasks").optboolean(false),
+                            dayOfWeekLabel = d.get("wday_label").optjstring(d.get("wday").optjstring("")),
+                            fullDateStr = d.get("date_str").optjstring(""),
                             commandToExecute = if (d.get("cmd").isnil()) null else d.get("cmd").tojstring()
                         ))
                     }

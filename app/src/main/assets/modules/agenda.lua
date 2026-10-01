@@ -1,5 +1,5 @@
 -- ============================================================
--- agenda.lua — Calendário & Tarefas Offline
+-- agenda.lua — Calendário & Tarefas Offline (Modo Semana Horizontal)
 -- Prefixo: a
 -- ============================================================
 local M = {}
@@ -11,14 +11,12 @@ local DATA_FILE = "agenda_offline.json"
 
 local state = {
     is_open = true,
-    view_mode = "month", -- "month", "week", "day"
-    view_year = 2026,
-    view_month = 10,
     selected_str = "2026-10-01",
+    view_center_ts = nil, -- Timestamp base do carrossel semanal
     items = {} -- { ["2026-10-01"] = { tasks = {}, events = {} } }
 }
 
--- ── Funções de Data e Calendário ──
+-- ── Funções de Data e Utilitários ──
 
 local function get_today_str()
     return Engine.time.date("yyyy-MM-dd", Engine.time.now())
@@ -32,28 +30,6 @@ local function parse_ymd(str)
     return nil, nil, nil
 end
 
-local function format_display_date(str)
-    local y, m, d = parse_ymd(str)
-    if y and m and d then
-        return string.format("%02d/%02d/%04d", d, m, y)
-    end
-    return str
-end
-
-local function get_days_in_month(y, m)
-    local d_in_m = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31}
-    if m == 2 and ((y % 4 == 0 and y % 100 ~= 0) or (y % 400 == 0)) then
-        return 29
-    end
-    return d_in_m[m] or 30
-end
-
-local function get_first_wday_of_month(y, m)
-    local ts = os.time({ year = y, month = m, day = 1, hour = 12 })
-    local w = tonumber(os.date("%w", ts))
-    return w or 0 -- 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
-end
-
 local function date_to_ts(y, m, d)
     return os.time({ year = y, month = m, day = d, hour = 12 })
 end
@@ -65,12 +41,28 @@ local function ts_to_date_str(ts)
     return string.format("%04d-%02d-%02d", dy, dm, dd)
 end
 
+local function format_display_date(str)
+    local y, m, d = parse_ymd(str)
+    if y and m and d then
+        local wdays = { "Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado" }
+        local ts = date_to_ts(y, m, d)
+        local w = (tonumber(os.date("%w", ts)) or 0) + 1
+        return string.format("%s, %02d/%02d/%04d", wdays[w] or "", d, m, y)
+    end
+    return str
+end
+
+local function get_wday_short(ts)
+    local wdays = { "DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB" }
+    local w = (tonumber(os.date("%w", ts)) or 0) + 1
+    return wdays[w] or "---"
+end
+
 -- ── Persistência ──
 
 local function save_data()
     local to_save = {
         is_open = state.is_open,
-        view_mode = state.view_mode,
         items = state.items
     }
     Engine.files.write(DATA_FILE, Engine.json.encode(to_save))
@@ -78,20 +70,18 @@ end
 
 local function load_data()
     local today_str = get_today_str()
-    local ty, tm, td = parse_ymd(today_str)
-    state.view_year = ty or 2026
-    state.view_month = tm or 10
     state.selected_str = today_str
+    local ty, tm, td = parse_ymd(today_str)
+    state.view_center_ts = date_to_ts(ty or 2026, tm or 10, td or 1)
 
     local raw = Engine.files.read(DATA_FILE)
     if raw and raw ~= "" then
         local data = Engine.json.parse(raw)
         if type(data) == "table" then
             if data.is_open ~= nil then state.is_open = data.is_open end
-            if data.view_mode then state.view_mode = data.view_mode end
             if type(data.items) == "table" then state.items = data.items end
 
-            -- Migração de formato antigo
+            -- Migração de dados legados
             if data.tasks or data.events then
                 if not state.items[today_str] then
                     state.items[today_str] = { tasks = {}, events = {} }
@@ -130,64 +120,51 @@ function M.render()
     local sel_str = state.selected_str or today_str
     local sel_items = get_day_items(sel_str)
 
+    if not state.view_center_ts then
+        local sy, sm, sd = parse_ymd(sel_str)
+        state.view_center_ts = date_to_ts(sy or 2026, sm or 10, sd or 1)
+    end
+
+    -- Cria carrossel contínuo de 15 dias centralizado em view_center_ts (-7 a +7 dias)
+    local days_ui = {}
+    local center_ts = state.view_center_ts
+
     local meses = {
         "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
         "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
     }
-    local month_label = (meses[state.view_month] or "") .. " " .. state.view_year
 
-    local days_ui = {}
+    local start_m = tonumber(os.date("%m", center_ts - (7 * 86400))) or 1
+    local end_m = tonumber(os.date("%m", center_ts + (7 * 86400))) or 1
+    local c_year = tonumber(os.date("%Y", center_ts)) or 2026
 
-    if state.view_mode == "month" then
-        local first_wday = get_first_wday_of_month(state.view_year, state.view_month)
-        local max_d = get_days_in_month(state.view_year, state.view_month)
-
-        -- Espaços vazios antes do dia 1
-        for _ = 1, first_wday do
-            table.insert(days_ui, { day = -1 })
-        end
-
-        -- Dias do mês
-        for d = 1, max_d do
-            local d_str = string.format("%04d-%02d-%02d", state.view_year, state.view_month, d)
-            local its = state.items[d_str]
-            table.insert(days_ui, {
-                day = d,
-                is_today = (d_str == today_str),
-                is_selected = (d_str == sel_str),
-                has_tasks = its and (#its.tasks > 0) or false,
-                has_events = its and (#its.events > 0) or false,
-                cmd = "a sel " .. d_str
-            })
-        end
-    elseif state.view_mode == "week" then
-        local sy, sm, sd = parse_ymd(sel_str)
-        local base_ts = date_to_ts(sy or state.view_year, sm or state.view_month, sd or 1)
-        local cur_wday = tonumber(os.date("%w", base_ts)) or 0
-        local sunday_ts = base_ts - (cur_wday * 86400)
-
-        for i = 0, 6 do
-            local d_ts = sunday_ts + (i * 86400)
-            local d_str = ts_to_date_str(d_ts)
-            local _, _, day_num = parse_ymd(d_str)
-            local its = state.items[d_str]
-            table.insert(days_ui, {
-                day = day_num or 1,
-                is_today = (d_str == today_str),
-                is_selected = (d_str == sel_str),
-                has_tasks = its and (#its.tasks > 0) or false,
-                has_events = its and (#its.events > 0) or false,
-                cmd = "a sel " .. d_str
-            })
-        end
+    local month_label = meses[start_m] or ""
+    if start_m ~= end_m then
+        month_label = month_label .. " / " .. (meses[end_m] or "") .. " " .. c_year
+    else
+        month_label = month_label .. " " .. c_year
     end
-    -- Se view_mode for "day", days_ui fica vazio e oculta o grid no FeedZone
 
-    -- Itens do dia selecionado
+    for offset = -7, 7 do
+        local d_ts = center_ts + (offset * 86400)
+        local d_str = ts_to_date_str(d_ts)
+        local _, _, day_num = parse_ymd(d_str)
+        local its = state.items[d_str]
+
+        table.insert(days_ui, {
+            day = day_num or 1,
+            wday_label = get_wday_short(d_ts),
+            date_str = d_str,
+            is_today = (d_str == today_str),
+            is_selected = (d_str == sel_str),
+            has_tasks = (its and #its.tasks > 0) or false,
+            has_events = (its and #its.events > 0) or false,
+            cmd = "a sel " .. d_str
+        })
+    end
+
+    -- Eventos do dia selecionado
     local ui_events = {}
-    local ui_tasks = {}
-    local actions = {}
-
     for i, ev in ipairs(sel_items.events) do
         table.insert(ui_events, {
             id = tostring(i),
@@ -199,6 +176,8 @@ function M.render()
         })
     end
 
+    -- Tarefas do dia selecionado
+    local ui_tasks = {}
     local has_checked = false
     for i, t in ipairs(sel_items.tasks) do
         table.insert(ui_tasks, {
@@ -212,15 +191,8 @@ function M.render()
         if t.checked then has_checked = true end
     end
 
-    -- Ações do Card
-    if state.view_mode == "month" then
-        table.insert(actions, { label = "[Semana]", cmd = "a vw week" })
-    elseif state.view_mode == "week" then
-        table.insert(actions, { label = "[Dia]", cmd = "a vw day" })
-    else
-        table.insert(actions, { label = "[Mês]", cmd = "a vw month" })
-    end
-
+    -- Botões de Ação
+    local actions = {}
     table.insert(actions, { label = "Hoje", cmd = "a today" })
     table.insert(actions, { label = "< Ant", cmd = "a prev" })
     table.insert(actions, { label = "Próx >", cmd = "a next" })
@@ -238,14 +210,17 @@ function M.render()
         cmd = (state.is_open and "a close" or "a open")
     })
 
-    local subtitle = "Data: " .. format_display_date(sel_str)
+    local subtitle = format_display_date(sel_str)
     if sel_str == today_str then
         subtitle = subtitle .. " (Hoje)"
     end
 
+    local _, sm_sel, sd_sel = parse_ymd(sel_str)
+    local short_date = string.format("%02d/%02d", sd_sel or 1, sm_sel or 1)
+
     return {
         type = "agenda",
-        title = "Agenda Offline",
+        title = "Agenda",
         subtitle = subtitle,
         is_open = state.is_open,
         month_label = month_label,
@@ -253,7 +228,7 @@ function M.render()
         events = ui_events,
         tasks = ui_tasks,
         actions = actions,
-        input_hint = "Nova tarefa em " .. format_display_date(sel_str) .. "...",
+        input_hint = "Nova tarefa em " .. short_date .. "...",
         input_cmd = "a"
     }
 end
@@ -264,7 +239,7 @@ function M.on_command(args)
     if not args or args:match("^%s*$") then
         return {
             success = true,
-            message = "Agenda: selecione uma data ou use 'a [] <tarefa>' / 'a evt <hora> <titulo>'"
+            message = "Agenda: toque em um dia ou use 'a [] <tarefa>' / 'a evt <hora> <titulo>'"
         }
     end
 
@@ -285,89 +260,33 @@ function M.on_command(args)
     elseif cmd_lower == "today" or cmd_lower == "hoje" then
         local today_str = get_today_str()
         state.selected_str = today_str
-        local y, m, _ = parse_ymd(today_str)
-        if y and m then
-            state.view_year = y
-            state.view_month = m
-        end
+        local ty, tm, td = parse_ymd(today_str)
+        state.view_center_ts = date_to_ts(ty, tm, td)
         return { success = true, message = "Visualizando hoje (" .. format_display_date(today_str) .. ")" }
-    elseif cmd_lower == "vw" and rest then
-        local r = rest:lower():match("%S+")
-        if r == "month" or r == "mes" or r == "mês" then
-            state.view_mode = "month"
-            save_data()
-            return { success = true }
-        elseif r == "week" or r == "semana" then
-            state.view_mode = "week"
-            save_data()
-            return { success = true }
-        elseif r == "day" or r == "dia" then
-            state.view_mode = "day"
-            save_data()
-            return { success = true }
-        end
     elseif cmd_lower == "prev" then
-        if state.view_mode == "month" then
-            state.view_month = state.view_month - 1
-            if state.view_month < 1 then
-                state.view_month = 12
-                state.view_year = state.view_year - 1
-            end
-            state.selected_str = string.format("%04d-%02d-01", state.view_year, state.view_month)
-        elseif state.view_mode == "week" then
-            local y, m, d = parse_ymd(state.selected_str)
-            local ts = date_to_ts(y or state.view_year, m or state.view_month, d or 1) - (7 * 86400)
-            state.selected_str = ts_to_date_str(ts)
-            local ny, nm, _ = parse_ymd(state.selected_str)
-            state.view_year = ny or state.view_year
-            state.view_month = nm or state.view_month
-        else
-            local y, m, d = parse_ymd(state.selected_str)
-            local ts = date_to_ts(y or state.view_year, m or state.view_month, d or 1) - 86400
-            state.selected_str = ts_to_date_str(ts)
-            local ny, nm, _ = parse_ymd(state.selected_str)
-            state.view_year = ny or state.view_year
-            state.view_month = nm or state.view_month
-        end
+        -- Retrocede 7 dias no carrossel
+        state.view_center_ts = (state.view_center_ts or os.time()) - (7 * 86400)
+        state.selected_str = ts_to_date_str(state.view_center_ts)
         return { success = true }
     elseif cmd_lower == "next" then
-        if state.view_mode == "month" then
-            state.view_month = state.view_month + 1
-            if state.view_month > 12 then
-                state.view_month = 1
-                state.view_year = state.view_year + 1
-            end
-            state.selected_str = string.format("%04d-%02d-01", state.view_year, state.view_month)
-        elseif state.view_mode == "week" then
-            local y, m, d = parse_ymd(state.selected_str)
-            local ts = date_to_ts(y or state.view_year, m or state.view_month, d or 1) + (7 * 86400)
-            state.selected_str = ts_to_date_str(ts)
-            local ny, nm, _ = parse_ymd(state.selected_str)
-            state.view_year = ny or state.view_year
-            state.view_month = nm or state.view_month
-        else
-            local y, m, d = parse_ymd(state.selected_str)
-            local ts = date_to_ts(y or state.view_year, m or state.view_month, d or 1) + 86400
-            state.selected_str = ts_to_date_str(ts)
-            local ny, nm, _ = parse_ymd(state.selected_str)
-            state.view_year = ny or state.view_year
-            state.view_month = nm or state.view_month
-        end
+        -- Avança 7 dias no carrossel
+        state.view_center_ts = (state.view_center_ts or os.time()) + (7 * 86400)
+        state.selected_str = ts_to_date_str(state.view_center_ts)
         return { success = true }
     elseif cmd_lower == "sel" and rest then
-        -- Suporta 'yyyy-MM-dd' ou número do dia 'd'
+        -- Suporta 'yyyy-MM-dd' ou número do dia
         local y, m, d = parse_ymd(rest:match("%S+"))
         if y and m and d then
             state.selected_str = string.format("%04d-%02d-%02d", y, m, d)
-            state.view_year = y
-            state.view_month = m
+            state.view_center_ts = date_to_ts(y, m, d)
             return { success = true }
         end
         local d_num = tonumber(rest:match("%S+"))
-        if d_num and d_num >= 1 and d_num <= 31 then
-            local max_d = get_days_in_month(state.view_year, state.view_month)
-            if d_num > max_d then d_num = max_d end
-            state.selected_str = string.format("%04d-%02d-%02d", state.view_year, state.view_month, d_num)
+        if d_num then
+            local cy = tonumber(os.date("%Y", state.view_center_ts))
+            local cm = tonumber(os.date("%m", state.view_center_ts))
+            state.selected_str = string.format("%04d-%02d-%02d", cy, cm, d_num)
+            state.view_center_ts = date_to_ts(cy, cm, d_num)
             return { success = true }
         end
     elseif cmd_lower == "toggle" and rest then
@@ -398,9 +317,7 @@ function M.on_command(args)
         local its = get_day_items(state.selected_str)
         local remaining = {}
         for _, t in ipairs(its.tasks) do
-            if not t.checked then
-                table.insert(remaining, t)
-            end
+            if not t.checked then table.insert(remaining, t) end
         end
         its.tasks = remaining
         save_data()
@@ -448,19 +365,18 @@ function M.on_command(args)
     elseif cmd_lower == "help" or cmd_lower == "?" then
         return {
             success = true,
-            message = "AGENDA COMANDOS:\n" ..
-                      "• a <texto> : Nova tarefa no dia\n" ..
-                      "• a [] <texto> : Nova tarefa com checkbox\n" ..
+            message = "AGENDA (Semana):\n" ..
+                      "• a <texto> : Nova tarefa no dia selecionado\n" ..
+                      "• a [] <texto> : Tarefa com checkbox\n" ..
                       "• a evt <hora> <titulo> [@local] [#cor] : Novo evento\n" ..
                       "• a today / a hoje : Volta para hoje\n" ..
-                      "• a sel <dia|data> : Seleciona data (ex: a sel 15 ou a sel 2026-10-15)\n" ..
-                      "• a vw <month|week|day> : Alterna visualização\n" ..
-                      "• a prev / a next : Navega no calendário\n" ..
+                      "• a sel <dia|data> : Seleciona data no carrossel\n" ..
+                      "• a prev / a next : Navega pelas semanas\n" ..
                       "• a clear : Limpa tarefas concluídas\n" ..
                       "• a clear_evt : Limpa eventos do dia"
         }
     else
-        -- Fallback: Qualquer texto digitado adiciona uma tarefa no dia selecionado
+        -- Fallback: texto direto cria tarefa no dia selecionado
         local text = args:match("^%s*(.-)%s*$")
         if text and text ~= "" then
             table.insert(get_day_items(state.selected_str).tasks, {
@@ -482,7 +398,6 @@ function M.autocomplete(args)
     local sub = args:match("^%s*(.*)") or ""
     local cmds = {
         "today", "hoje",
-        "vw month", "vw week", "vw day",
         "next", "prev",
         "[] ", "todo ", "add ", "evt ",
         "sel ", "clear", "clear_evt",
@@ -504,13 +419,12 @@ function M.autocomplete(args)
     return res
 end
 
-M.help = "a <texto> -> Adiciona tarefa no dia\n" ..
+M.help = "a <texto> -> Adiciona tarefa no dia selecionado\n" ..
          "a [] <texto> -> Tarefa com checkbox\n" ..
          "a evt <hora> <titulo> [@local] [#cor] -> Evento com horário\n" ..
-         "a today / a hoje -> Volta para o dia de hoje\n" ..
-         "a sel <dia|data> -> Seleciona dia\n" ..
-         "a vw <month|week|day> -> Muda visualização\n" ..
-         "a prev / a next -> Navega no calendário\n" ..
+         "a today / a hoje -> Centraliza hoje\n" ..
+         "a sel <data> -> Seleciona dia\n" ..
+         "a prev / a next -> Navega semanas\n" ..
          "a clear -> Limpa tarefas concluídas\n" ..
          "a clear_evt -> Limpa eventos do dia"
 
