@@ -115,6 +115,29 @@ sealed interface BlockUiModel {
         val deleteCommand: String? = null
     )
 
+    /**
+     * Bloco de Calendário/Agenda
+     */
+    data class Agenda(
+        override val moduleId: String,
+        override val title: String,
+        val subtitle: String? = null,
+        val isOpen: Boolean = true,
+        val events: List<AgendaEvent> = emptyList(),
+        val tasks: List<NoteItem> = emptyList(), // Reusa NoteItem para tarefas
+        val actions: List<BlockAction> = emptyList()
+    ) : BlockUiModel
+
+    data class AgendaEvent(
+        val id: String,
+        val title: String,
+        val timeLabel: String,
+        val isAllDay: Boolean,
+        val location: String?,
+        val colorHex: String?,
+        val commandToExecute: String? = null
+    )
+
     data class BlockAction(
         val label: String,
         val commandToExecute: String

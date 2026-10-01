@@ -335,6 +335,73 @@ class LuaModule(
             )
         }
 
+        // Verifica se é tipo Agenda
+        if (type == "agenda") {
+            val events = mutableListOf<BlockUiModel.AgendaEvent>()
+            val eventsVal = table.get("events")
+            if (!eventsVal.isnil() && eventsVal.istable()) {
+                val eTable = eventsVal.checktable()
+                for (i in 1..eTable.length()) {
+                    val ev = eTable.get(i)
+                    if (ev.istable()) {
+                        events.add(BlockUiModel.AgendaEvent(
+                            id = ev.get("id").optjstring(i.toString()),
+                            title = ev.get("title").optjstring(""),
+                            timeLabel = ev.get("time_label").optjstring(""),
+                            isAllDay = ev.get("all_day").optboolean(false),
+                            location = if (ev.get("location").isnil()) null else ev.get("location").tojstring(),
+                            colorHex = if (ev.get("color").isnil()) null else ev.get("color").tojstring(),
+                            commandToExecute = if (ev.get("cmd").isnil()) null else ev.get("cmd").tojstring()
+                        ))
+                    }
+                }
+            }
+
+            val tasks = mutableListOf<BlockUiModel.NoteItem>()
+            val tasksVal = table.get("tasks")
+            if (!tasksVal.isnil() && tasksVal.istable()) {
+                val tTable = tasksVal.checktable()
+                for (i in 1..tTable.length()) {
+                    val it = tTable.get(i)
+                    if (it.istable()) {
+                        tasks.add(BlockUiModel.NoteItem(
+                            id = it.get("id").optint(i),
+                            text = it.get("text").optjstring(""),
+                            isChecklist = it.get("is_checklist").optboolean(false) || it.get("checklist").optboolean(false),
+                            isChecked = it.get("is_checked").optboolean(false) || it.get("checked").optboolean(false),
+                            toggleCommand = if (it.get("toggle_cmd").isnil()) null else it.get("toggle_cmd").tojstring(),
+                            deleteCommand = if (it.get("delete_cmd").isnil()) null else it.get("delete_cmd").tojstring()
+                        ))
+                    }
+                }
+            }
+
+            val actions = mutableListOf<BlockUiModel.BlockAction>()
+            val actionsVal = table.get("actions")
+            if (!actionsVal.isnil() && actionsVal.istable()) {
+                val actionTable = actionsVal.checktable()
+                for (i in 1..actionTable.length()) {
+                    val act = actionTable.get(i)
+                    if (act.istable()) {
+                        actions.add(BlockUiModel.BlockAction(
+                            label = act.get("label").optjstring("[Botão]"),
+                            commandToExecute = act.get("cmd").optjstring("")
+                        ))
+                    }
+                }
+            }
+
+            return BlockUiModel.Agenda(
+                moduleId = id,
+                title = blockTitle,
+                subtitle = if (table.get("subtitle").isnil()) null else table.get("subtitle").tojstring(),
+                isOpen = table.get("is_open").optboolean(true),
+                events = events,
+                tasks = tasks,
+                actions = actions
+            )
+        }
+
         // Verifica se é tipo Media (Player de música rico)
         if (type == "media" || !table.get("cover").isnil()) {
             val actions = mutableListOf<BlockUiModel.BlockAction>()

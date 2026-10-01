@@ -58,6 +58,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lifetracker.engine.core.model.BlockUiModel
 import com.lifetracker.engine.ui.theme.EngineTheme
@@ -196,6 +197,7 @@ fun FeedZone(
                     is BlockUiModel.Media -> MediaCard(block, onActionClick)
                     is BlockUiModel.Workout -> WorkoutCard(block, onActionClick)
                     is BlockUiModel.Notes -> NotesCard(block, onActionClick)
+                    is BlockUiModel.Agenda -> AgendaCard(block, onActionClick)
                 }
             }
         }
@@ -1320,6 +1322,202 @@ private fun NotesCard(
                                     .clickable { onActionClick(item.deleteCommand) }
                                     .padding(start = 8.dp, top = 2.dp, bottom = 2.dp)
                             )
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Actions ──
+        if (block.actions.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+            ) {
+                block.actions.forEach { action ->
+                    Text(
+                        text = action.label,
+                        style = EngineTypography.titleMedium,
+                        color = EngineTheme.colors.accentCyan,
+                        modifier = Modifier
+                            .clickable { onActionClick(action.commandToExecute) }
+                            .padding(vertical = 4.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AgendaCard(
+    block: BlockUiModel.Agenda,
+    onActionClick: (String) -> Unit
+) {
+    CardContainer {
+        // ── Header ──
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = block.title, style = EngineTypography.titleMedium)
+                if (!block.subtitle.isNullOrEmpty()) {
+                    Text(
+                        text = block.subtitle,
+                        style = EngineTypography.labelSmall,
+                        color = EngineTheme.colors.textSecondary
+                    )
+                }
+            }
+        }
+
+        if (block.isOpen) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 350.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Secao de Eventos
+                if (block.events.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        block.events.forEach { event ->
+                            val colorInt = event.colorHex?.toIntOrNull()
+                            val parsedColor = if (colorInt != null) Color(colorInt) else EngineTheme.colors.accentCyan
+                            
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .then(
+                                        if (event.commandToExecute != null) {
+                                            Modifier.clickable { onActionClick(event.commandToExecute) }
+                                        } else Modifier
+                                    )
+                                    .padding(vertical = 4.dp, horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Barra lateral colorida
+                                Box(
+                                    modifier = Modifier
+                                        .width(3.dp)
+                                        .height(24.dp)
+                                        .background(parsedColor, RoundedCornerShape(1.dp))
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = event.title,
+                                        style = EngineTypography.bodyMedium,
+                                        color = EngineTheme.colors.textPrimary
+                                    )
+                                    if (event.location != null && event.location.isNotBlank()) {
+                                        Text(
+                                            text = event.location,
+                                            style = EngineTypography.labelSmall,
+                                            color = EngineTheme.colors.textMuted
+                                        )
+                                    }
+                                }
+                                
+                                Text(
+                                    text = event.timeLabel,
+                                    style = EngineTypography.labelSmall,
+                                    color = EngineTheme.colors.textSecondary,
+                                    textAlign = TextAlign.End
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Linha divisória se tiver ambos
+                if (block.events.isNotEmpty() && block.tasks.isNotEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(EngineTheme.colors.cardBorder)
+                    )
+                }
+
+                // Secao de Tarefas
+                if (block.tasks.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        block.tasks.forEach { item ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .then(
+                                        if (item.isChecklist && item.toggleCommand != null) {
+                                            Modifier.clickable { onActionClick(item.toggleCommand) }
+                                        } else Modifier
+                                    )
+                                    .padding(vertical = 4.dp, horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (item.isChecklist) {
+                                    val boxColor = if (item.isChecked) EngineTheme.colors.accentGreen
+                                        else EngineTheme.colors.cardBorder
+                                    Box(
+                                        modifier = Modifier
+                                            .size(18.dp)
+                                            .clip(RoundedCornerShape(3.dp))
+                                            .border(1.5f.dp, boxColor, RoundedCornerShape(3.dp))
+                                            .background(
+                                                if (item.isChecked) EngineTheme.colors.accentGreen.copy(alpha = 0.15f)
+                                                else Color.Transparent
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        if (item.isChecked) {
+                                            Text(
+                                                text = "✓",
+                                                style = EngineTypography.labelSmall,
+                                                color = EngineTheme.colors.accentGreen
+                                            )
+                                        }
+                                    }
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                } else {
+                                    Text(
+                                        text = "•",
+                                        style = EngineTypography.bodyMedium,
+                                        color = EngineTheme.colors.accentCyan,
+                                        modifier = Modifier.padding(end = 8.dp)
+                                    )
+                                }
+        
+                                Text(
+                                    text = item.text,
+                                    style = EngineTypography.bodyMedium,
+                                    color = if (item.isChecked) EngineTheme.colors.textMuted
+                                        else EngineTheme.colors.textPrimary,
+                                    textDecoration = if (item.isChecked) TextDecoration.LineThrough
+                                        else TextDecoration.None,
+                                    modifier = Modifier.weight(1f)
+                                )
+        
+                                if (item.deleteCommand != null) {
+                                    Text(
+                                        text = "✕",
+                                        style = EngineTypography.labelSmall,
+                                        color = EngineTheme.colors.accentRed.copy(alpha = 0.6f),
+                                        modifier = Modifier
+                                            .clickable { onActionClick(item.deleteCommand) }
+                                            .padding(start = 8.dp, top = 2.dp, bottom = 2.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
