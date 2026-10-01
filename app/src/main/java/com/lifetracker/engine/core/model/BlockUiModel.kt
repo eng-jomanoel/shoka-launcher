@@ -191,5 +191,71 @@ sealed interface BlockUiModel {
         val isActive: Boolean,
         val commandToExecute: String
     )
+
+    /**
+     * Bloco de Dieta e Nutrição com acompanhamento de macros, calorias,
+     * ingestão de água, refeições do dia e itens detalhados.
+     */
+    data class Diet(
+        override val moduleId: String,
+        override val title: String,
+        val planName: String = "Plano Alimentar",
+        val dayName: String = "Hoje",
+        val caloriesConsumed: Int = 0,
+        val caloriesTarget: Int = 2000,
+        val proteinConsumed: Int = 0,
+        val proteinTarget: Int = 150,
+        val carbsConsumed: Int = 0,
+        val carbsTarget: Int = 200,
+        val fatsConsumed: Int = 0,
+        val fatsTarget: Int = 60,
+        val waterConsumedMl: Int = 0,
+        val waterTargetMl: Int = 2500,
+        val currentMealIndex: Int = 1,
+        val totalMeals: Int = 1,
+        val currentMealName: String = "",
+        val currentMealTime: String = "",
+        val currentMealCalories: Int = 0,
+        val currentMealMacros: String = "",
+        val currentMealNotes: String? = null,
+        val currentMealItems: List<DietFoodItem> = emptyList(),
+        val currentMealIsCompleted: Boolean = false,
+        val checkMealCommand: String? = null,
+        val nextMealCommand: String? = null,
+        val prevMealCommand: String? = null,
+        val addWaterCommand250: String = "d +250",
+        val addWaterCommand500: String = "d +500",
+        val meals: List<DietMealItem> = emptyList(),
+        val showMealList: Boolean = false,
+        val toggleListCommand: String? = null,
+        val days: List<DietDayItem> = emptyList(),
+        val files: List<WorkoutFileItem> = emptyList(),
+        val showFileList: Boolean = false,
+        val toggleFilesCommand: String? = null,
+        val actions: List<BlockAction> = emptyList()
+    ) : BlockUiModel
+
+    data class DietFoodItem(
+        val name: String,
+        val amount: String = ""
+    )
+
+    data class DietMealItem(
+        val id: String,
+        val name: String,
+        val time: String = "",
+        val calories: Int = 0,
+        val isCompleted: Boolean = false,
+        val isCurrent: Boolean = false,
+        val commandToExecute: String = ""
+    )
+
+    data class DietDayItem(
+        val dayId: String,
+        val label: String,
+        val isCurrent: Boolean = false,
+        val isToday: Boolean = false,
+        val commandToExecute: String = ""
+    )
 }
 

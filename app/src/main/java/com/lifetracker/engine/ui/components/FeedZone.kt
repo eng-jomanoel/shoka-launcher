@@ -205,6 +205,7 @@ fun FeedZone(
                     is BlockUiModel.Interactive -> InteractiveCard(block, onActionClick)
                     is BlockUiModel.Media -> MediaCard(block, onActionClick)
                     is BlockUiModel.Workout -> WorkoutCard(block, onActionClick)
+                    is BlockUiModel.Diet -> DietCard(block, onActionClick)
                     is BlockUiModel.Notes -> NotesCard(block, onActionClick)
                     is BlockUiModel.Agenda -> AgendaCard(block, onActionClick)
                 }
@@ -1270,6 +1271,466 @@ private fun WorkoutCard(
                                 color = EngineTheme.colors.accentAmber
                             )
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DietCard(
+    block: BlockUiModel.Diet,
+    onActionClick: (String) -> Unit
+) {
+    CardContainer {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // ── Header ──
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = block.title,
+                        style = EngineTypography.titleMedium,
+                        color = EngineTheme.colors.accentGreen
+                    )
+                    Text(
+                        text = "${block.dayName} • ${block.planName}",
+                        style = EngineTypography.labelSmall,
+                        color = EngineTheme.colors.textSecondary
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (block.days.size > 1) {
+                        block.days.forEach { day ->
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(
+                                        if (day.isCurrent) EngineTheme.colors.accentGreen.copy(alpha = 0.2f)
+                                        else EngineTheme.colors.cardBorder
+                                    )
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (day.isCurrent) EngineTheme.colors.accentGreen else Color.Transparent,
+                                        shape = RoundedCornerShape(4.dp)
+                                    )
+                                    .clickable { onActionClick(day.commandToExecute) }
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = day.label,
+                                    style = EngineTypography.labelSmall,
+                                    color = if (day.isCurrent) EngineTheme.colors.accentGreen else EngineTheme.colors.textMuted
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // ── Progresso de Calorias e Macros ──
+            val calorieProgress = if (block.caloriesTarget > 0) {
+                (block.caloriesConsumed.toFloat() / block.caloriesTarget.toFloat()).coerceIn(0f, 1f)
+            } else 0f
+            val caloriePercent = (calorieProgress * 100).toInt()
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "CALORIAS",
+                    style = EngineTypography.labelSmall,
+                    color = EngineTheme.colors.textMuted
+                )
+                Text(
+                    text = "${block.caloriesConsumed} / ${block.caloriesTarget} kcal ($caloriePercent%)",
+                    style = EngineTypography.labelSmall,
+                    color = if (block.caloriesConsumed >= block.caloriesTarget) EngineTheme.colors.accentGreen else EngineTheme.colors.textPrimary
+                )
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Barra de Progresso de Calorias
+            LinearProgressIndicator(
+                progress = { calorieProgress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp)),
+                color = EngineTheme.colors.accentGreen,
+                trackColor = EngineTheme.colors.cardBorder
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Badges de Macros (Proteína, Carbo, Gordura)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Proteína
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(EngineTheme.colors.cardBorder, RoundedCornerShape(4.dp))
+                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "P: ${block.proteinConsumed}/${block.proteinTarget}g",
+                        style = EngineTypography.labelSmall,
+                        color = EngineTheme.colors.accentCyan
+                    )
+                }
+
+                // Carboidrato
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(EngineTheme.colors.cardBorder, RoundedCornerShape(4.dp))
+                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "C: ${block.carbsConsumed}/${block.carbsTarget}g",
+                        style = EngineTypography.labelSmall,
+                        color = EngineTheme.colors.accentAmber
+                    )
+                }
+
+                // Gordura
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .background(EngineTheme.colors.cardBorder, RoundedCornerShape(4.dp))
+                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "G: ${block.fatsConsumed}/${block.fatsTarget}g",
+                        style = EngineTypography.labelSmall,
+                        color = EngineTheme.colors.accentRed
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Água
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Água: ${block.waterConsumedMl}/${block.waterTargetMl} ml",
+                    style = EngineTypography.labelSmall,
+                    color = EngineTheme.colors.accentCyan
+                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(EngineTheme.colors.cardBorder)
+                            .clickable { onActionClick(block.addWaterCommand250) }
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(text = "+250ml", style = EngineTypography.labelSmall, color = EngineTheme.colors.textPrimary)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(EngineTheme.colors.cardBorder)
+                            .clickable { onActionClick(block.addWaterCommand500) }
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(text = "+500ml", style = EngineTypography.labelSmall, color = EngineTheme.colors.textPrimary)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // ── Refeição em Destaque ──
+            if (block.currentMealName.isNotBlank()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(EngineTheme.colors.background, RoundedCornerShape(6.dp))
+                        .border(
+                            width = 1.dp,
+                            color = if (block.currentMealIsCompleted) EngineTheme.colors.accentGreen else EngineTheme.colors.cardBorder,
+                            shape = RoundedCornerShape(6.dp)
+                        )
+                        .padding(10.dp)
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "${block.currentMealIndex}/${block.totalMeals} • ${block.currentMealName.uppercase()}",
+                                style = EngineTypography.titleMedium,
+                                color = if (block.currentMealIsCompleted) EngineTheme.colors.accentGreen else EngineTheme.colors.textPrimary
+                            )
+                            if (block.currentMealTime.isNotBlank()) {
+                                Text(
+                                    text = block.currentMealTime,
+                                    style = EngineTypography.labelSmall,
+                                    color = EngineTheme.colors.accentAmber
+                                )
+                            }
+                        }
+
+                        if (block.currentMealCalories > 0 || block.currentMealMacros.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "${if (block.currentMealCalories > 0) "${block.currentMealCalories} kcal • " else ""}${block.currentMealMacros}",
+                                style = EngineTypography.labelSmall,
+                                color = EngineTheme.colors.textSecondary
+                            )
+                        }
+
+                        if (!block.currentMealNotes.isNullOrEmpty()) {
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Nota: ${block.currentMealNotes}",
+                                style = EngineTypography.labelSmall,
+                                color = EngineTheme.colors.accentCyan.copy(alpha = 0.8f)
+                            )
+                        }
+
+                        if (block.currentMealItems.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                block.currentMealItems.forEach { item ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            text = "• ${item.name}",
+                                            style = EngineTypography.bodyMedium,
+                                            color = EngineTheme.colors.textPrimary,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        if (item.amount.isNotBlank()) {
+                                            Text(
+                                                text = item.amount,
+                                                style = EngineTypography.bodyMedium,
+                                                color = EngineTheme.colors.textMuted
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Botões de Ação da Refeição
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Navegação
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                if (block.prevMealCommand != null) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(RoundedCornerShape(3.dp))
+                                            .background(EngineTheme.colors.cardBorder)
+                                            .clickable { onActionClick(block.prevMealCommand) },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("<", style = EngineTypography.labelSmall, color = EngineTheme.colors.textPrimary)
+                                    }
+                                }
+                                if (block.nextMealCommand != null) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(28.dp)
+                                            .clip(RoundedCornerShape(3.dp))
+                                            .background(EngineTheme.colors.cardBorder)
+                                            .clickable { onActionClick(block.nextMealCommand) },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(">", style = EngineTypography.labelSmall, color = EngineTheme.colors.textPrimary)
+                                    }
+                                }
+                            }
+
+                            // Botão de Concluir Refeição
+                            if (block.checkMealCommand != null) {
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(
+                                            if (block.currentMealIsCompleted) EngineTheme.colors.accentGreen.copy(alpha = 0.2f)
+                                            else EngineTheme.colors.cardBorder
+                                        )
+                                        .border(
+                                            width = 1.dp,
+                                            color = if (block.currentMealIsCompleted) EngineTheme.colors.accentGreen else Color.Transparent,
+                                            shape = RoundedCornerShape(4.dp)
+                                        )
+                                        .clickable { onActionClick(block.checkMealCommand) }
+                                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                                ) {
+                                    Text(
+                                        text = if (block.currentMealIsCompleted) "✓ Concluída" else "Concluir Refeição",
+                                        style = EngineTypography.labelSmall,
+                                        color = if (block.currentMealIsCompleted) EngineTheme.colors.accentGreen else EngineTheme.colors.accentCyan
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Lista de Refeições do Dia ──
+            if (block.showMealList && block.meals.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "REFEIÇÕES DO DIA",
+                    style = EngineTypography.labelSmall,
+                    color = EngineTheme.colors.textMuted
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 200.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    block.meals.forEach { meal ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(
+                                    if (meal.isCurrent) EngineTheme.colors.cardBorder.copy(alpha = 0.5f)
+                                    else Color.Transparent
+                                )
+                                .clickable { onActionClick(meal.commandToExecute) }
+                                .padding(vertical = 4.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (meal.isCompleted) "✓ " else "○ ",
+                                style = EngineTypography.labelSmall,
+                                color = if (meal.isCompleted) EngineTheme.colors.accentGreen else EngineTheme.colors.textMuted
+                            )
+                            Text(
+                                text = meal.name,
+                                style = EngineTypography.bodyMedium,
+                                color = if (meal.isCompleted) EngineTheme.colors.textMuted else EngineTheme.colors.textPrimary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (meal.time.isNotBlank()) {
+                                Text(
+                                    text = meal.time,
+                                    style = EngineTypography.labelSmall,
+                                    color = EngineTheme.colors.textMuted
+                                )
+                            }
+                            if (meal.calories > 0) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "${meal.calories} kcal",
+                                    style = EngineTypography.labelSmall,
+                                    color = EngineTheme.colors.accentAmber
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Lista de Arquivos de Dieta ──
+            if (block.showFileList && block.files.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "PLANOS DE DIETA DISPONÍVEIS",
+                    style = EngineTypography.labelSmall,
+                    color = EngineTheme.colors.textMuted
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 160.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    block.files.forEach { file ->
+                        val itemColor = if (file.isActive) EngineTheme.colors.accentGreen else EngineTheme.colors.textSecondary
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(
+                                    if (file.isActive) EngineTheme.colors.cardBorder.copy(alpha = 0.5f)
+                                    else Color.Transparent
+                                )
+                                .clickable { onActionClick(file.commandToExecute) }
+                                .padding(vertical = 4.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = (if (file.isActive) "▶ " else "  ") + file.name,
+                                style = EngineTypography.bodyMedium,
+                                color = itemColor,
+                                maxLines = 1,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (file.isActive) {
+                                Text(
+                                    text = "[ATIVA]",
+                                    style = EngineTypography.labelSmall,
+                                    color = EngineTheme.colors.accentGreen
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Actions ──
+            if (block.actions.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState())
+                ) {
+                    block.actions.forEach { action ->
+                        Text(
+                            text = action.label,
+                            style = EngineTypography.titleMedium,
+                            color = EngineTheme.colors.accentCyan,
+                            modifier = Modifier
+                                .clickable { onActionClick(action.commandToExecute) }
+                                .padding(vertical = 4.dp)
+                        )
                     }
                 }
             }

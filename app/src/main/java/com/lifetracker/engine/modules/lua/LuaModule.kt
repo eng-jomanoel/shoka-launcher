@@ -330,6 +330,132 @@ class LuaModule(
             )
         }
 
+        // Verifica se é tipo Diet (Dieta e Nutrição)
+        if (type == "diet") {
+            val actions = mutableListOf<BlockUiModel.BlockAction>()
+            val actionsVal = table.get("actions")
+            if (!actionsVal.isnil() && actionsVal.istable()) {
+                val actionTable = actionsVal.checktable()
+                for (i in 1..actionTable.length()) {
+                    val act = actionTable.get(i)
+                    if (act.istable()) {
+                        actions.add(BlockUiModel.BlockAction(
+                            label = act.get("label").optjstring("[Botão]"),
+                            commandToExecute = act.get("cmd").optjstring("")
+                        ))
+                    }
+                }
+            }
+
+            val currentMealItems = mutableListOf<BlockUiModel.DietFoodItem>()
+            val itemsVal = table.get("current_meal_items")
+            if (!itemsVal.isnil() && itemsVal.istable()) {
+                val itemTable = itemsVal.checktable()
+                for (i in 1..itemTable.length()) {
+                    val it = itemTable.get(i)
+                    if (it.istable()) {
+                        currentMealItems.add(BlockUiModel.DietFoodItem(
+                            name = it.get("name").optjstring(""),
+                            amount = it.get("amount").optjstring("")
+                        ))
+                    }
+                }
+            }
+
+            val meals = mutableListOf<BlockUiModel.DietMealItem>()
+            val mealsVal = table.get("meals")
+            if (!mealsVal.isnil() && mealsVal.istable()) {
+                val mTable = mealsVal.checktable()
+                for (i in 1..mTable.length()) {
+                    val m = mTable.get(i)
+                    if (m.istable()) {
+                        meals.add(BlockUiModel.DietMealItem(
+                            id = m.get("id").optjstring(i.toString()),
+                            name = m.get("name").optjstring("Refeição"),
+                            time = m.get("time").optjstring(""),
+                            calories = m.get("calories").optint(0),
+                            isCompleted = m.get("completed").optboolean(false),
+                            isCurrent = m.get("current").optboolean(false),
+                            commandToExecute = m.get("cmd").optjstring("")
+                        ))
+                    }
+                }
+            }
+
+            val days = mutableListOf<BlockUiModel.DietDayItem>()
+            val daysVal = table.get("days")
+            if (!daysVal.isnil() && daysVal.istable()) {
+                val dayTable = daysVal.checktable()
+                for (i in 1..dayTable.length()) {
+                    val d = dayTable.get(i)
+                    if (d.istable()) {
+                        days.add(BlockUiModel.DietDayItem(
+                            dayId = d.get("day_id").optjstring(""),
+                            label = d.get("label").optjstring("Dia"),
+                            isCurrent = d.get("is_current").optboolean(false),
+                            isToday = d.get("is_today").optboolean(false),
+                            commandToExecute = d.get("cmd").optjstring("")
+                        ))
+                    }
+                }
+            }
+
+            val files = mutableListOf<BlockUiModel.WorkoutFileItem>()
+            val filesVal = table.get("files")
+            if (!filesVal.isnil() && filesVal.istable()) {
+                val fileTable = filesVal.checktable()
+                for (i in 1..fileTable.length()) {
+                    val f = fileTable.get(i)
+                    if (f.istable()) {
+                        files.add(BlockUiModel.WorkoutFileItem(
+                            name = f.get("name").optjstring(""),
+                            isActive = f.get("is_active").optboolean(false),
+                            commandToExecute = f.get("cmd").optjstring("")
+                        ))
+                    }
+                }
+            }
+
+            return BlockUiModel.Diet(
+                moduleId = id,
+                title = blockTitle,
+                planName = table.get("plan_name").optjstring("Plano Alimentar"),
+                dayName = table.get("day_name").optjstring("Hoje"),
+                caloriesConsumed = table.get("calories_consumed").optint(0),
+                caloriesTarget = table.get("calories_target").optint(2000),
+                proteinConsumed = table.get("protein_consumed").optint(0),
+                proteinTarget = table.get("protein_target").optint(150),
+                carbsConsumed = table.get("carbs_consumed").optint(0),
+                carbsTarget = table.get("carbs_target").optint(200),
+                fatsConsumed = table.get("fats_consumed").optint(0),
+                fatsTarget = table.get("fats_target").optint(60),
+                waterConsumedMl = table.get("water_consumed").optint(0),
+                waterTargetMl = table.get("water_target").optint(2500),
+                currentMealIndex = table.get("current_meal_index").optint(1),
+                totalMeals = table.get("total_meals").optint(1),
+                currentMealName = table.get("current_meal_name").optjstring(""),
+                currentMealTime = table.get("current_meal_time").optjstring(""),
+                currentMealCalories = table.get("current_meal_calories").optint(0),
+                currentMealMacros = table.get("current_meal_macros").optjstring(""),
+                currentMealNotes = if (table.get("current_meal_notes").isnil()) null else table.get("current_meal_notes").tojstring(),
+                currentMealItems = currentMealItems,
+                currentMealIsCompleted = table.get("current_meal_completed").optboolean(false),
+                checkMealCommand = if (table.get("check_cmd").isnil()) null else table.get("check_cmd").tojstring(),
+                nextMealCommand = if (table.get("next_cmd").isnil()) null else table.get("next_cmd").tojstring(),
+                prevMealCommand = if (table.get("prev_cmd").isnil()) null else table.get("prev_cmd").tojstring(),
+                addWaterCommand250 = table.get("add_water_250_cmd").optjstring("d +250"),
+                addWaterCommand500 = table.get("add_water_500_cmd").optjstring("d +500"),
+                meals = meals,
+                showMealList = table.get("show_meal_list").optboolean(false),
+                toggleListCommand = if (table.get("toggle_list_cmd").isnil()) null else table.get("toggle_list_cmd").tojstring(),
+                days = days,
+                files = files,
+                showFileList = table.get("show_file_list").optboolean(false),
+                toggleFilesCommand = if (table.get("toggle_files_cmd").isnil()) null else table.get("toggle_files_cmd").tojstring(),
+                actions = actions
+            )
+        }
+
         // Verifica se é tipo Notes (Anotações e Checklist)
         if (type == "notes") {
             val items = mutableListOf<BlockUiModel.NoteItem>()
